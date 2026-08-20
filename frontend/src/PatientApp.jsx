@@ -10,7 +10,7 @@ export default function PatientApp() {
       
       <div className="flex-1 w-full relative">
         <iframe 
-          src="https://cardioos.streamlit.app/patient_app?embedded=true" 
+          src="https://cardioos-ai.streamlit.app/patient_app?embedded=true" 
           className="absolute top-0 left-0 w-full h-full border-0"
           title="Patient Portal"
         />
