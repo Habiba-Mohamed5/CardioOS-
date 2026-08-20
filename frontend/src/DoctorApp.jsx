@@ -10,7 +10,7 @@ export default function DoctorApp() {
       
       <div className="flex-1 w-full relative">
         <iframe 
-          src="http://localhost:8501/doctor_app?embedded=true" 
+          src="https://cardioos.streamlit.app/doctor_app?embedded=true" 
           className="absolute top-0 left-0 w-full h-full border-0"
           title="Doctor Portal"
         />
