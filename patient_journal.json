@@ -1,0 +1,133 @@
+[
+    {
+        "date": "2026-08-18 16:36",
+        "systolic": 120,
+        "diastolic": 80,
+        "sugar": 110,
+        "weight": 75.0,
+        "symptoms": [
+            "إرهاق عام"
+        ],
+        "meals": "رز ابيض وبسله ",
+        "is_emergency": false
+    },
+    {
+        "date": "2026-08-18 16:37",
+        "systolic": 120,
+        "diastolic": 80,
+        "sugar": 110,
+        "weight": 75.0,
+        "symptoms": [
+            "إرهاق عام",
+            "صداع مفاجئ وشديد جداً"
+        ],
+        "meals": "كيكه وبيتزا",
+        "is_emergency": true
+    },
+    {
+        "date": "2026-08-18 16:37",
+        "systolic": 120,
+        "diastolic": 80,
+        "sugar": 110,
+        "weight": 75.0,
+        "symptoms": [
+            "صداع مفاجئ وشديد جداً"
+        ],
+        "meals": "كيكه وبيتزا",
+        "is_emergency": true
+    },
+    {
+        "date": "2026-08-18 16:55",
+        "systolic": 120,
+        "diastolic": 80,
+        "sugar": 110,
+        "weight": 75.0,
+        "symptoms": [],
+        "notes": "اررز بشعريه و فراخ",
+        "ai_analysis": "",
+        "is_emergency": false
+    },
+    {
+        "date": "2026-08-18 16:55",
+        "systolic": 120,
+        "diastolic": 80,
+        "sugar": 110,
+        "weight": 75.0,
+        "symptoms": [],
+        "notes": "اررز بشعريه و فراخ",
+        "ai_analysis": "",
+        "is_emergency": false
+    },
+    {
+        "date": "2026-08-19 23:02",
+        "systolic": 120,
+        "diastolic": 80,
+        "sugar": 110,
+        "weight": 75.0,
+        "symptoms": [
+            "Severe Chest Pain"
+        ],
+        "notes": "",
+        "ai_analysis": "",
+        "is_emergency": true
+    },
+    {
+        "date": "2026-08-19 23:08",
+        "systolic": 120,
+        "diastolic": 80,
+        "sugar": 110,
+        "weight": 75.0,
+        "symptoms": [],
+        "notes": "",
+        "ai_analysis": "Image analysis error: file uri and mime_type are required.",
+        "is_emergency": false
+    },
+    {
+        "date": "2026-08-19 23:13",
+        "systolic": 141,
+        "diastolic": 80,
+        "sugar": 110,
+        "weight": 75.0,
+        "symptoms": [
+            "دوخة خفيفة"
+        ],
+        "notes": "",
+        "ai_analysis": "### **Meal Assessment**\n* **Composition:** ~50% non-starchy roasted/steamed vegetables (broccoli, carrots, onions) and ~50% lean protein (grilled chicken breast).\n* **Macronutrient Profile:** High protein, high dietary fiber, low refined carbohydrates, low saturated fat.\n* **Micronutrient Profile:** Rich in potassium, vitamins A, C, K, and dietary antioxidants.\n\n---\n\n### **Clinical Health Value**\nThis meal aligns with evidence-based dietary patterns (DASH, Mediterranean, and ADA Guidelines) for managing chronic conditions such as **Type 2 Diabetes, Hypertension, Dyslipidemia, and Cardiovascular Disease**.\n\n* **Glycemic Control:** The combination of lean protein and soluble/insoluble fiber blunts postprandial blood glucose spikes and improves insulin sensitivity.\n* **Cardiovascular & Metabolic Health:** Minimal saturated fat supports lipid management (LDL-C reduction), while potassium from the vegetable array supports blood pressure regulation.\n* **Satiety & Weight Management:** High-volume, low-caloric-density vegetables combined with lean protein enhance satiety and assist with weight maintenance.\n\n---\n\n### **Actionable Clinical Recommendations**\n\n1. **Watch Marination & Glazes:** Ensure marinades or glazes on the chicken breast are low in added sugars (e.g., honey, BBQ sauce) and low-sodium (<140 mg sodium per serving) to prevent hidden calorie intake and sodium-induced fluid retention.\n2. **Oil Usage:** Recommend roasting or grilling with small amounts of heart-healthy, unsaturated fats (e.g., extra virgin olive oil) rather than high-saturated or trans fats.\n3. **Chronic Kidney Disease (CKD) Precaution:** If the patient has Stage 3–5 CKD or hyperkalemia, monitor total potassium load from dense vegetable portions (broccoli and carrots) and adjust portions per individual laboratory trends.",
+        "is_emergency": false
+    },
+    {
+        "date": "2026-08-19 23:13",
+        "systolic": 141,
+        "diastolic": 80,
+        "sugar": 110,
+        "weight": 75.0,
+        "symptoms": [
+            "دوخة خفيفة"
+        ],
+        "notes": "",
+        "ai_analysis": "### **Clinical Meal Assessment & Health Recommendation**\n\n#### **Visual Analysis**\n* **Lean Protein:** Grilled chicken breast (~half the plate).\n* **Non-Starchy Vegetables:** Roasted/steamed broccoli, flower-cut carrots, and roasted onions (~half the plate).\n* **Overall Profile:** Low-carbohydrate, high-protein, nutrient-dense, and fiber-rich meal with low saturated fat.\n\n---\n\n### **Clinical Recommendations by Condition**\n\n#### **1. Type 2 Diabetes & Metabolic Syndrome (Highly Recommended)**\n* **Benefits:** Minimal glycemic impact. High protein and fiber promote satiety, delay gastric emptying, and help prevent postprandial glucose spikes.\n* **Modification:** If total daily carbohydrate targets permit, a small serving (1/4 plate) of complex, whole-grain carbohydrates (e.g., quinoa, brown rice, or sweet potato) can be added to provide sustained energy.\n\n#### **2. Cardiovascular Disease & Hypertension (Favorable)**\n* **Benefits:** Low in saturated fat and cholesterol; abundant in dietary fiber and potassium from vegetables, supporting vascular health and blood pressure regulation.\n* **Modification:** Ensure marinades or glazes on the chicken are **low-sodium** and free from added sugars or high-fructose corn syrup.\n\n#### **3. Chronic Kidney Disease (CKD - Requires Caution)**\n* **Non-Dialysis (Stages 3–5):** The protein portion (~30–40g+) may exceed target per-meal protein restrictions to prevent hyperfiltration. Additionally, broccoli and carrots contain moderate-to-high potassium. \n* **Modification:** Reduce the chicken serving size and consult renal dietitian regarding daily potassium limits.\n\n---\n\n### **Summary Patient Guidance**\nThis meal serves as an **excellent standard template** for managing weight, blood sugar, and cardiovascular risk. To optimize health outcomes:\n* **Watch seasonings:** Use herbs, garlic, lemon juice, or olive oil instead of salty or sugary sauces.\n* **Hydration:** Pair with water or unsweetened tea.",
+        "is_emergency": false
+    },
+    {
+        "date": "2026-08-19 23:16",
+        "systolic": 120,
+        "diastolic": 80,
+        "sugar": 110,
+        "weight": 75.0,
+        "symptoms": [],
+        "notes": "",
+        "ai_analysis": "**تحليل الصورة:**\nالصورة لـ **وجبة غذائية صحية متكاملة** تتكون من:\n* **بروتين نقي:** صدر دجاج مشوي (منخفض الدهون).\n* **خضروات غنية بالألياف:** بروكلي، جزر، وبصل (مطهوة بالشوي/البخار).\n\n---\n\n**التوصية الصحية السريرية (لمرضى السكري، ضغط الدم، وأمراض القلب):**\n\nتُعتبر هذه الوجبة **نموذجية ومثالية للتحكم في الأمراض المزمنة**، ونوصي بالآتي:\n\n1. **لأصحاب مرض السكري:** الوجبة ممتازة لعدم احتواؤها على كربوهيدرات مكررة؛ فالألياف الموجودة في البروكلي والجزر تساعد في استقرار مستوى السكر في الدم ومنع ارتفاعه المفاجئ.\n2. **لأصحاب ضغط الدم والأمراض القلبية:** الشوي يقلل من نسبة الدهون المشبعة والكوليسترول. يُوصى فقط بـ **التقليل المباشر للملح** في التتبيلة واستبداله بالليمون والأعشاب الطبيعية.\n3. **ملاحظة خاصة:** يُراعى التقليل من الصلصات الجاهزة (مثل الباربكيو أو الصويا) أثناء الشوي لاحتوائها على صوديوم وسكريات خفية.\n\n*(ملاحظة استثنائية: لمرضى القصور الكلوي المتقدم، يرجى مراجعة الطبيب لتحديد حصص الخضروات لاحتوائها على البوتاسيوم).*",
+        "is_emergency": false
+    },
+    {
+        "date": "2026-08-20 01:24",
+        "systolic": 137,
+        "diastolic": 80,
+        "sugar": 110,
+        "weight": 75.0,
+        "symptoms": [],
+        "notes": "",
+        "ai_analysis": "هذه الصورة تحتوي على طبق صحي ومتوازن، يتكون من **صدور دجاج مشوية** (مصدر ممتاز للبروتين قليل الدهون) مع **خضروات مشوية** (بروكلي وجزر وبصل) التي توفر الألياف والفيتامينات والمعادن الضرورية.\n\n### تحليل الطبق:\n*   **المميزات:** الطبق منخفض الدهون المشبعة، غني بالألياف، ومطهو بطريقة صحية (الشواء) بدلاً من القلي، مما يجعله خياراً ممتازاً للتحكم في الوزن ومستويات السكر في الدم.\n*   **الجانب التغذوي:** وجبة مثالية لمريض يحتاج إلى التحكم في السعرات الحرارية أو مؤشر نسبة السكر في الدم.\n\n---\n\n### توصية صحية سريرية مختصرة:\nلمريض بمرض مزمن (مثل السكري أو ارتفاع ضغط الدم أو أمراض القلب):\n\n**\"هذا الطبق خيار ممتاز كوجبة أساسية، ولكن يُنصح بضرورة التحكم في كمية الملح المضاف أثناء التتبيل للوقاية من ارتفاع ضغط الدم، والتأكد من عدم استخدام كميات كبيرة من الزيوت أو الصلصات المحتوية على سكر مخفي أثناء الشواء. كما يُفضل إضافة حصة صغيرة من الكربوهيدرات المعقدة (مثل نصف كوب من الكينوا أو الأرز البني) لإكمال التوازن الغذائي إذا كانت الخطة العلاجية تتطلب طاقة مستمرة.\"**\n\n*ملاحظة: إذا كنت تتبع حمية خاصة مرتبطة بوظائف الكلى، يجب الحذر من نسبة البوتاسيوم الموجودة في الخضروات، ويُفضل استشارة اختصاصي التغذية العلاجية لتعديل الكميات بما يتناسب مع تحاليلك الدورية.*",
+        "is_emergency": false
+    }
+]

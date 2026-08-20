@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+:root {
+  font-family: 'Cairo', sans-serif;
+}
+body {
+  background-color: #0f172a;
+  color: #f8fafc;
+  direction: rtl;
+}
