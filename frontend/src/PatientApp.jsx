@@ -6,6 +6,8 @@ import {
   BarChart2, BookOpen, AlertOctagon, Download, CheckSquare, ChevronDown
 } from 'lucide-react';
 import { apiRequest, API_BASE_URL } from './apiConfig';
+import LiveEcgWidget from './LiveEcgWidget';
+import PatientVitalityWidget from './PatientVitalityWidget';
 
 export default function PatientApp() {
   const [activeTab, setActiveTab] = useState('profile'); // profile | journal | alerts | report | consult | chat | guidelines | bench
@@ -397,6 +399,10 @@ export default function PatientApp() {
             </div>
           </div>
         </div>
+
+        {/* Live Interactive Medical Telemetry & Vitality Ring */}
+        <LiveEcgWidget color="rose" bpm={74} status="إيقاع طبيعي ومستقر (Normal Sinus Rhythm)" />
+        <PatientVitalityWidget score={94} name={patientData?.display_name || patientId} streak={7} />
 
         {/* ========================================================================= */}
         {/* TAB 1: MEDICAL PROFILE */}

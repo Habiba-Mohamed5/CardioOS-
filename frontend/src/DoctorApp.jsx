@@ -6,6 +6,7 @@ import {
   TrendingUp, Filter, ArrowUpDown, ChevronDown, CheckSquare, ShieldAlert
 } from 'lucide-react';
 import { API_BASE_URL, apiRequest } from './apiConfig';
+import LiveEcgWidget from './LiveEcgWidget';
 
 export default function DoctorApp() {
   const [activeTab, setActiveTab] = useState('overview'); // overview | copilot | reports | bench | eval | safety
@@ -301,6 +302,14 @@ export default function DoctorApp() {
             </div>
           </div>
         </div>
+
+        {/* Real-time Telemetry & ECG Monitor Strip */}
+        <LiveEcgWidget 
+          color="cyan" 
+          bpm={72} 
+          title="شريط المراقبة والتخطيط السريري اللحظي (Clinical Telemetry & Vitals Monitor)" 
+          status="محرك الذكاء الاصطناعي نشط بنسبة 100%" 
+        />
         
         {/* ========================================================================= */}
         {/* TAB 1: OVERVIEW DASHBOARD */}
