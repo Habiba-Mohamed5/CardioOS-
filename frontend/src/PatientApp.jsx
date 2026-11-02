@@ -2,41 +2,78 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Heart, Activity, Camera, MessageSquare, FileText, 
   Send, Upload, CheckCircle2, AlertCircle, Clock, 
-  ChevronLeft, Sparkles, RefreshCw, User
+  ChevronLeft, Sparkles, RefreshCw, User, ShieldAlert,
+  BarChart2, BookOpen, AlertOctagon, Download, CheckSquare, ChevronDown
 } from 'lucide-react';
 import { apiRequest, API_BASE_URL } from './apiConfig';
 
 export default function PatientApp() {
-  const [activeTab, setActiveTab] = useState('journal'); // journal | vision | chat | notes
+  const [activeTab, setActiveTab] = useState('profile'); // profile | journal | alerts | report | consult | chat | guidelines | bench
   
-  // Patient Profile
+  // Patient Profile & Login
   const [patientId, setPatientId] = useState('حبيبة_محمد');
   const [patientData, setPatientData] = useState(null);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [conditions, setConditions] = useState([]);
+  const [medicalNotes, setMedicalNotes] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
 
-  // Journal / Vitals Form
+  // Tab 2: Journal & Vitals Form
   const [vitals, setVitals] = useState({ systolic: '', diastolic: '', sugar: '', weight: '' });
+  const [selectedSymptoms, setSelectedSymptoms] = useState([]);
   const [journalMessage, setJournalMessage] = useState('');
+  const [journalFile, setJournalFile] = useState(null);
+  const [journalPreviewUrl, setJournalPreviewUrl] = useState(null);
+  const [journalVisionResult, setJournalVisionResult] = useState(null);
+  const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
   const [isSubmittingJournal, setIsSubmittingJournal] = useState(false);
   const [journalSuccess, setJournalSuccess] = useState(false);
 
-  // Vision Analyzer Form
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [imageNote, setImageNote] = useState('');
-  const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
-  const [visionResult, setVisionResult] = useState(null);
+  // Tab 4: Doctor Report Generator
+  const [generatedReportText, setGeneratedReportText] = useState('');
 
-  // Chat State
+  // Tab 5: Send Consultation to Doctor
+  const [consultKind, setConsultKind] = useState('consultation_routine'); // consultation_urgent | consultation_routine
+  const [consultMessage, setConsultMessage] = useState('');
+  const [isSendingConsult, setIsSendingConsult] = useState(false);
+  const [consultSuccess, setConsultSuccess] = useState(false);
+
+  // Tab 6: General Chat
   const [chatMessages, setChatMessages] = useState([
     {
       role: 'assistant',
-      content: 'أهلاً بك! أنا رفيقك الصحي الذكي في CardioOS. كيف تشعر اليوم؟ يمكنك سؤالي عن قياساتك، أدويتك، أو إرسال صورة لوجبتك أو تحاليلك لتحليلها.'
+      content: 'أهلاً بك! أنا رفيقك الصحي في CardioOS. كيف تشعر اليوم؟ اسألني عن أدويتك أو أعراضك، أو أرسل لي صورة لوجبتك أو تحاليلك.'
     }
   ]);
   const [chatInput, setChatInput] = useState('');
   const [isChatSending, setIsChatSending] = useState(false);
   const chatBottomRef = useRef(null);
+
+  // Tab 7: Patient Guideline Consultation
+  const [guidelineQuery, setGuidelineQuery] = useState('');
+  const [guidelineResult, setGuidelineResult] = useState(null);
+  const [isSearchingGuidelines, setIsSearchingGuidelines] = useState(false);
+
+  // Tab 8: Population Benchmarking
+  const [benchmarks, setBenchmarks] = useState(null);
+
+  const ALL_CONDITIONS = [
+    'ارتفاع ضغط الدم (Hypertension)',
+    'أمراض القلب التاجية (Heart Disease)',
+    'قصور عضلة القلب (Heart Failure)',
+    'مرض السكري (Diabetes)',
+    'قصور الكلى المزمن (Kidney Disease)',
+    'ارتفاع الكوليسترول (High Cholesterol)'
+  ];
+
+  const SYMPTOMS_LIST = [
+    'ألم أو ثقل في الصدر',
+    'ضيق في التنفس',
+    'دوخة أو إغماء',
+    'خفقان سريع في القلب',
+    'تورم في القدمين أو الكاحلين',
+    'إرهاق شديد غير معتاد'
+  ];
 
   useEffect(() => {
     loadPatientData(patientId);
@@ -48,21 +85,55 @@ export default function PatientApp() {
 
   async function loadPatientData(pid) {
     if (!pid.trim()) return;
-    setIsLoadingProfile(true);
     try {
       const data = await apiRequest(`/api/patients/${pid}`);
       setPatientData(data);
+      if (data.profile) {
+        setConditions(data.profile.conditions || []);
+        setMedicalNotes(data.profile.notes || '');
+      }
+      // Load benchmarks
+      const bData = await apiRequest(`/api/benchmarking/${pid}`);
+      setBenchmarks(bData.benchmarks);
     } catch (err) {
       console.error('Failed to load patient data', err);
-    } finally {
-      setIsLoadingProfile(false);
     }
   }
 
+  // Save Medical Profile
+  async function handleSaveProfile(e) {
+    e.preventDefault();
+    setIsSavingProfile(true);
+    try {
+      await apiRequest(`/api/patient/profile/${patientId}`, {
+        method: 'POST',
+        body: JSON.stringify({ conditions, notes: medicalNotes })
+      });
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 3000);
+    } catch (err) {
+      alert('فشل في حفظ الملف الطبي: ' + err.message);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  }
+
+  // Toggle symptom checkbox
+  function toggleSymptom(sym) {
+    if (selectedSymptoms.includes(sym)) {
+      setSelectedSymptoms(selectedSymptoms.filter(s => s !== sym));
+    } else {
+      setSelectedSymptoms([...selectedSymptoms, sym]);
+    }
+  }
+
+  // Submit Journal Entry
   async function handleJournalSubmit(e) {
     e.preventDefault();
     setIsSubmittingJournal(true);
     setJournalSuccess(false);
+
+    const isEmergency = (parseFloat(vitals.systolic) >= 180) || (parseFloat(vitals.diastolic) >= 120) || selectedSymptoms.includes('ألم أو ثقل في الصدر');
 
     try {
       const parsedVitals = {};
@@ -76,13 +147,19 @@ export default function PatientApp() {
         body: JSON.stringify({
           kind: 'daily',
           message: journalMessage.trim() || undefined,
-          vitals: Object.keys(parsedVitals).length > 0 ? parsedVitals : undefined
+          vitals: Object.keys(parsedVitals).length > 0 ? parsedVitals : undefined,
+          symptoms: selectedSymptoms,
+          is_emergency: isEmergency
         })
       });
 
       setJournalSuccess(true);
       setVitals({ systolic: '', diastolic: '', sugar: '', weight: '' });
+      setSelectedSymptoms([]);
       setJournalMessage('');
+      setJournalFile(null);
+      setJournalPreviewUrl(null);
+      setJournalVisionResult(null);
       loadPatientData(patientId);
       setTimeout(() => setJournalSuccess(false), 4000);
     } catch (err) {
@@ -92,35 +169,23 @@ export default function PatientApp() {
     }
   }
 
-  function handleFileSelect(e) {
-    const file = e.target.files[0];
-    if (file) {
-      setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
-      setVisionResult(null);
-    }
-  }
-
-  async function handleAnalyzeImage(e) {
-    e.preventDefault();
-    if (!selectedFile) return;
-
+  // Analyze Image with AI Vision
+  async function handleAnalyzeJournalImage() {
+    if (!journalFile) return;
     setIsAnalyzingImage(true);
-    setVisionResult(null);
-
     const formData = new FormData();
-    formData.append('file', selectedFile);
-    if (imageNote.trim()) formData.append('note', imageNote.trim());
-    if (patientId) formData.append('patient_id', patientId);
+    formData.append('file', journalFile);
+    if (journalMessage.trim()) formData.append('note', journalMessage.trim());
+    formData.append('patient_id', patientId);
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/patient/analyze-image`, {
         method: 'POST',
         body: formData
       });
-      if (!res.ok) throw new Error('فشل التحليل البصري للصورة.');
+      if (!res.ok) throw new Error('فشل التحليل البصري');
       const data = await res.json();
-      setVisionResult(data.analysis);
+      setJournalVisionResult(data.analysis);
     } catch (err) {
       alert(err.message);
     } finally {
@@ -128,55 +193,124 @@ export default function PatientApp() {
     }
   }
 
+  // Generate Doctor Report (Tab 4)
+  function handleGenerateDoctorReport() {
+    let rep = `=== تقرير CardioOS الطبي الشامل للمريض ===\n`;
+    rep += `اسم المريض: ${patientData?.display_name || patientId}\n`;
+    rep += `تاريخ التقرير: ${new Date().toLocaleString('ar-EG')}\n`;
+    rep += `الأمراض المزمنة: ${conditions.length > 0 ? conditions.join(', ') : 'لا يوجد'}\n`;
+    rep += `الأدوية والملاحظات: ${medicalNotes || 'لا يوجد'}\n\n`;
+    rep += `--- آخر القياسات الحيوية ---\n`;
+    if (patientData?.latest_vitals) {
+      rep += `• الضغط: ${patientData.latest_vitals.systolic || '—'}/${patientData.latest_vitals.diastolic || '—'} mmHg\n`;
+      rep += `• سكر الدم: ${patientData.latest_vitals.sugar || '—'} mg/dL\n`;
+      rep += `• الوزن: ${patientData.latest_vitals.weight || '—'} kg\n\n`;
+    }
+
+    rep += `--- سجل اليوميات والشكاوى السابقة ---\n`;
+    patientData?.reports?.slice(0, 10).forEach((r, idx) => {
+      rep += `[${idx + 1}] (${r.date}) نوع: ${r.kind} | الحالة: ${r.status}\n`;
+      if (r.message) rep += `  الملاحظة: ${r.message}\n`;
+      if (r.latest_vitals) rep += `  القياسات: ${JSON.stringify(r.latest_vitals)}\n`;
+    });
+
+    setGeneratedReportText(rep);
+  }
+
+  // Send Consultation Request (Tab 5)
+  async function handleSendConsultation(e) {
+    e.preventDefault();
+    if (!consultMessage.trim()) return;
+    setIsSendingConsult(true);
+    setConsultSuccess(false);
+
+    try {
+      await apiRequest(`/api/patients/${patientId}/reports`, {
+        method: 'POST',
+        body: JSON.stringify({
+          kind: consultKind,
+          message: consultMessage.trim(),
+          vitals: patientData?.latest_vitals || undefined
+        })
+      });
+      setConsultSuccess(true);
+      setConsultMessage('');
+      loadPatientData(patientId);
+      setTimeout(() => setConsultSuccess(false), 4000);
+    } catch (err) {
+      alert('فشل في إرسال الاستشارة: ' + err.message);
+    } finally {
+      setIsSendingConsult(false);
+    }
+  }
+
+  // Send Chat Message (Tab 6)
   async function handleSendChat(e) {
     e.preventDefault();
     if (!chatInput.trim() || isChatSending) return;
-
-    const userMsg = chatInput.trim();
+    const msg = chatInput.trim();
     setChatInput('');
-    setChatMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    setChatMessages(prev => [...prev, { role: 'user', content: msg }]);
     setIsChatSending(true);
 
     try {
       const data = await apiRequest('/api/patient/chat', {
         method: 'POST',
-        body: JSON.stringify({
-          message: userMsg,
-          patient_id: patientId
-        })
+        body: JSON.stringify({ message: msg, patient_id: patientId })
       });
       setChatMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
     } catch (err) {
-      setChatMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: 'عذراً، حدث خطأ أثناء الاتصال بالخادم. يُرجى المحاولة مرة أخرى لاحقاً.' 
-      }]);
+      setChatMessages(prev => [...prev, { role: 'assistant', content: 'حدث خطأ في الاتصال بالخادم.' }]);
     } finally {
       setIsChatSending(false);
     }
   }
 
+  // Search Guidelines RAG (Tab 7)
+  async function handleSearchGuidelines(e) {
+    e.preventDefault();
+    if (!guidelineQuery.trim()) return;
+    setIsSearchingGuidelines(true);
+    setGuidelineResult(null);
+
+    try {
+      const data = await apiRequest('/api/patient/guideline-consultation', {
+        method: 'POST',
+        body: JSON.stringify({ query: guidelineQuery.trim(), patient_id: patientId })
+      });
+      setGuidelineResult(data);
+    } catch (err) {
+      alert('فشل في استرجاع الإرشادات الطبية: ' + err.message);
+    } finally {
+      setIsSearchingGuidelines(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 flex flex-col font-sans selection:bg-rose-500/30" dir="rtl">
-      {/* Top Navigation */}
+      {/* Header */}
       <header className="h-16 px-6 bg-slate-900/90 border-b border-white/10 backdrop-blur-md flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <img src="/cardioos_named_logo.jpg" alt="CardioOS" className="h-9 w-9 rounded-lg object-cover ring-1 ring-rose-500/50" />
           <div>
             <h1 className="text-lg font-bold text-white flex items-center gap-2">
               Cardio<span className="text-rose-400">OS</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-300 border border-rose-500/20 font-medium">بوابة المريض</span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-300 border border-rose-500/20 font-medium">بوابة المريض الشاملة</span>
             </h1>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-1 bg-slate-950/60 p-1 rounded-xl border border-white/5">
+        {/* 8 Tabs Navigation */}
+        <div className="flex items-center gap-1 bg-slate-950/60 p-1 rounded-xl border border-white/5 overflow-x-auto max-w-2xl">
           {[
-            { id: 'journal', label: 'يومياتي وقياساتي', icon: Activity },
-            { id: 'vision', label: 'تحليل الوجبات والتحاليل بالذكاء الاصطناعي', icon: Camera },
-            { id: 'chat', label: 'الرفيق الصحي الذكي', icon: MessageSquare },
-            { id: 'notes', label: 'توجيهات الطبيب', icon: FileText },
+            { id: 'profile', label: 'الملف الطبي', icon: FileText },
+            { id: 'journal', label: 'اليوميات (نص/صورة)', icon: Activity },
+            { id: 'alerts', label: 'المؤشرات والتنبيهات', icon: AlertOctagon },
+            { id: 'report', label: 'تقرير للطبيب', icon: Download },
+            { id: 'consult', label: 'إرسال للدكتور', icon: Send },
+            { id: 'chat', label: 'المساعد الذكي', icon: MessageSquare },
+            { id: 'guidelines', label: 'استشارة موثقة', icon: BookOpen },
+            { id: 'bench', label: 'مقارنة بالمعدل', icon: BarChart2 },
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -184,7 +318,7 @@ export default function PatientApp() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                   isActive 
                     ? 'bg-gradient-to-r from-rose-500 to-pink-600 text-white shadow-lg shadow-rose-500/20' 
                     : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -198,14 +332,14 @@ export default function PatientApp() {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 bg-slate-950/60 border border-white/10 px-3 py-1.5 rounded-xl">
+          <div className="flex items-center gap-1.5 bg-slate-950/60 border border-white/10 px-3 py-1.5 rounded-xl text-xs">
             <User size={13} className="text-rose-400" />
             <input
               type="text"
               value={patientId}
               onChange={(e) => setPatientId(e.target.value)}
               className="bg-transparent border-0 text-xs font-semibold text-white w-24 focus:outline-none"
-              title="اسم المريض / المعرف"
+              title="اسم المريض"
             />
           </div>
           <a href="/" className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">
@@ -216,80 +350,227 @@ export default function PatientApp() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-5xl w-full mx-auto p-6">
-        
+
         {/* ========================================================================= */}
-        {/* TAB 1: DAILY HEALTH JOURNAL & VITALS */}
+        {/* TAB 1: MEDICAL PROFILE */}
+        {/* ========================================================================= */}
+        {activeTab === 'profile' && (
+          <div className="p-6 rounded-2xl bg-slate-900/90 border border-white/10 space-y-6 shadow-xl">
+            <div>
+              <h2 className="text-xl font-bold text-white mb-1">الملف الطبي والأمراض المزمنة</h2>
+              <p className="text-xs text-slate-400">سجل حالتك الصحية وأمراضك المزمنة والأدوية التي تتناولها بانتظام لتكون مرجعاً لطبيبك والذكاء الاصطناعي.</p>
+            </div>
+
+            {profileSaved && (
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                <CheckCircle2 size={16} />
+                تم حفظ وتحديث الملف الطبي بنجاح!
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProfile} className="space-y-6">
+              <div>
+                <label className="text-xs font-bold text-white block mb-3">الأمراض المزمنة المسجلة:</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {ALL_CONDITIONS.map((cond) => {
+                    const isChecked = conditions.includes(cond);
+                    return (
+                      <button
+                        type="button"
+                        key={cond}
+                        onClick={() => {
+                          if (isChecked) setConditions(conditions.filter(c => c !== cond));
+                          else setConditions([...conditions, cond]);
+                        }}
+                        className={`p-3 rounded-xl border text-right text-xs font-medium flex items-center justify-between transition ${
+                          isChecked 
+                            ? 'bg-rose-500/15 border-rose-500/40 text-white' 
+                            : 'bg-slate-950/60 border-white/5 text-slate-400 hover:border-white/15'
+                        }`}
+                      >
+                        <span>{cond}</span>
+                        <div className={`w-4 h-4 rounded flex items-center justify-center border ${isChecked ? 'bg-rose-500 border-rose-500 text-white' : 'border-slate-600'}`}>
+                          {isChecked && '✓'}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-white block mb-2">الأدوية اليومية أو الحساسيات أو ملاحظات خاصة:</label>
+                <textarea
+                  rows={4}
+                  value={medicalNotes}
+                  onChange={(e) => setMedicalNotes(e.target.value)}
+                  placeholder="مثال: أتناول أسبرين 81mg يومياً، ولدي حساسية من أدوية البنسلين..."
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSavingProfile}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white font-bold text-xs transition flex items-center gap-2 shadow-lg shadow-rose-500/20 disabled:opacity-50"
+              >
+                {isSavingProfile ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                <span>حفظ وتحديث الملف الطبي</span>
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 2: DAILY JOURNAL (TEXT & PHOTO) */}
         {/* ========================================================================= */}
         {activeTab === 'journal' && (
           <div className="space-y-6">
-            <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-950/90 border border-white/10 shadow-xl">
-              <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
-                <Heart size={20} className="text-rose-400" />
-                تسجيل القياسات والأعراض اليومية
-              </h2>
-              <p className="text-xs text-slate-400">
-                سجل قياساتك بانتظام لتظهر لطبيبك المعالج فوراً في شاشته، مما يساعده في ضبط خطتك العلاجية.
-              </p>
+            <div className="p-6 rounded-2xl bg-slate-900/90 border border-white/10 shadow-xl space-y-6">
+              <div>
+                <h2 className="text-xl font-bold text-white mb-1">تسجيل اليوميات الصحية (قراءات / وجبات / تحاليل)</h2>
+                <p className="text-xs text-slate-400">سجل قياساتك الحيوية اليومية أو ارفع صورة لوجبتك أو تحاليلك لتحليلها فوراً بالذكاء الاصطناعي.</p>
+              </div>
 
               {journalSuccess && (
-                <div className="mt-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
                   <CheckCircle2 size={16} />
-                  تم تسجيل القياسات بنجاح وإرسالها لطبيبك المعالج!
+                  تم تسجيل اليوميات وإرسالها لطبيبك بنجاح!
                 </div>
               )}
 
-              <form onSubmit={handleJournalSubmit} className="mt-6 space-y-4">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div>
-                    <label className="text-xs text-slate-400 block mb-1">الضغط الانقباضي (العالي)</label>
-                    <input
-                      type="number"
-                      placeholder="120"
-                      value={vitals.systolic}
-                      onChange={(e) => setVitals({ ...vitals, systolic: e.target.value })}
-                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-400 block mb-1">الضغط الانبساطي (المنخفض)</label>
-                    <input
-                      type="number"
-                      placeholder="80"
-                      value={vitals.diastolic}
-                      onChange={(e) => setVitals({ ...vitals, diastolic: e.target.value })}
-                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-400 block mb-1">سكر الدم (mg/dL)</label>
-                    <input
-                      type="number"
-                      placeholder="95"
-                      value={vitals.sugar}
-                      onChange={(e) => setVitals({ ...vitals, sugar: e.target.value })}
-                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-400 block mb-1">الوزن (kg)</label>
-                    <input
-                      type="number"
-                      placeholder="70"
-                      value={vitals.weight}
-                      onChange={(e) => setVitals({ ...vitals, weight: e.target.value })}
-                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50"
-                    />
+              <form onSubmit={handleJournalSubmit} className="space-y-6">
+                {/* Vitals Inputs */}
+                <div>
+                  <h4 className="text-xs font-bold text-slate-300 mb-2">1. القياسات الحيوية:</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-1">الضغط الانقباضي (العالي)</label>
+                      <input
+                        type="number"
+                        placeholder="120"
+                        value={vitals.systolic}
+                        onChange={(e) => setVitals({ ...vitals, systolic: e.target.value })}
+                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-1">الضغط الانبساطي (المنخفض)</label>
+                      <input
+                        type="number"
+                        placeholder="80"
+                        value={vitals.diastolic}
+                        onChange={(e) => setVitals({ ...vitals, diastolic: e.target.value })}
+                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-1">سكر الدم (mg/dL)</label>
+                      <input
+                        type="number"
+                        placeholder="95"
+                        value={vitals.sugar}
+                        onChange={(e) => setVitals({ ...vitals, sugar: e.target.value })}
+                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-1">الوزن (kg)</label>
+                      <input
+                        type="number"
+                        placeholder="70"
+                        value={vitals.weight}
+                        onChange={(e) => setVitals({ ...vitals, weight: e.target.value })}
+                        className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
 
+                {/* Symptoms Checkboxes */}
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">كيف تشعر اليوم؟ أو أي ملاحظة تود مشاركتها مع طبيبك:</label>
+                  <h4 className="text-xs font-bold text-slate-300 mb-2">2. الأعراض الحالية (إن وُجدت):</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {SYMPTOMS_LIST.map((sym) => {
+                      const isChecked = selectedSymptoms.includes(sym);
+                      return (
+                        <button
+                          type="button"
+                          key={sym}
+                          onClick={() => toggleSymptom(sym)}
+                          className={`p-2.5 rounded-xl border text-right text-xs transition flex items-center justify-between ${
+                            isChecked 
+                              ? 'bg-rose-500/20 border-rose-500/50 text-rose-200' 
+                              : 'bg-slate-950/60 border-white/5 text-slate-400'
+                          }`}
+                        >
+                          <span>{sym}</span>
+                          <span className="text-[10px]">{isChecked ? '✓' : '+'}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Photo Upload & Vision AI */}
+                <div>
+                  <h4 className="text-xs font-bold text-slate-300 mb-2">3. صورة لوجبة طعام أو نتيجة تحليل (AI Vision):</h4>
+                  <div className="border border-dashed border-white/15 rounded-xl p-4 text-center bg-slate-950/40 relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          setJournalFile(file);
+                          setJournalPreviewUrl(URL.createObjectURL(file));
+                          setJournalVisionResult(null);
+                        }
+                      }}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                    {journalPreviewUrl ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <img src={journalPreviewUrl} alt="Preview" className="max-h-40 rounded-lg object-contain shadow-md" />
+                        <span className="text-xs text-rose-400">اضغط لتغيير الصورة</span>
+                      </div>
+                    ) : (
+                      <div className="text-slate-400 space-y-1">
+                        <Camera size={24} className="mx-auto text-rose-400" />
+                        <p className="text-xs font-medium text-white">اضغط لرفع صورة طبق طعام أو تقرير طبي</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {journalFile && (
+                    <button
+                      type="button"
+                      onClick={handleAnalyzeJournalImage}
+                      disabled={isAnalyzingImage}
+                      className="mt-2 px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-rose-300 text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      {isAnalyzingImage ? <RefreshCw size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                      <span>تحليل الصورة بالذكاء الاصطناعي الآن</span>
+                    </button>
+                  )}
+
+                  {journalVisionResult && (
+                    <div className="mt-3 p-3.5 rounded-xl bg-slate-950 border border-white/10 text-xs text-slate-200 leading-relaxed whitespace-pre-wrap">
+                      <span className="font-bold text-rose-400 block mb-1">نتيجة التحليل البصري:</span>
+                      {journalVisionResult}
+                    </div>
+                  )}
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="text-xs font-bold text-slate-300 block mb-1">4. ملاحظات أو تفاصيل إضافية:</label>
                   <textarea
-                    rows={3}
-                    placeholder="مثال: شعرت بدوخة خفيفة بعد وجبة الغداء، وتناولت دوائي في موعده..."
+                    rows={2}
                     value={journalMessage}
                     onChange={(e) => setJournalMessage(e.target.value)}
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl p-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50"
+                    placeholder="اكتب أي ملاحظة عن شعورك اليوم أو وجباتك..."
+                    className="w-full bg-slate-950 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none"
                   />
                 </div>
 
@@ -299,140 +580,200 @@ export default function PatientApp() {
                   className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white font-bold text-xs transition flex items-center gap-2 shadow-lg shadow-rose-500/20 disabled:opacity-50"
                 >
                   {isSubmittingJournal ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
-                  <span>حفظ وإرسال التقرير</span>
+                  <span>حفظ وإرسال اليوميات</span>
                 </button>
               </form>
             </div>
+          </div>
+        )}
 
-            {/* Past History */}
-            <div className="p-6 rounded-2xl bg-slate-900/80 border border-white/10 space-y-4">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Clock size={16} className="text-rose-400" />
-                سجل قياساتي وبلاغاتي السابقة
-              </h3>
+        {/* ========================================================================= */}
+        {/* TAB 3: VITALS & ALERTS */}
+        {/* ========================================================================= */}
+        {activeTab === 'alerts' && (
+          <div className="space-y-6">
+            <div className="p-6 rounded-2xl bg-slate-900/90 border border-white/10 space-y-4">
+              <h2 className="text-xl font-bold text-white mb-1">المؤشرات والتنبيهات السريرية</h2>
+              
+              {/* Emergency Alert Banner */}
+              {patientData?.latest_vitals?.systolic >= 180 || patientData?.latest_vitals?.diastolic >= 120 ? (
+                <div className="p-4 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-200 text-xs flex items-center gap-3">
+                  <AlertOctagon size={24} className="text-rose-400 animate-pulse" />
+                  <div>
+                    <h4 className="font-bold text-rose-300">تنبيه طوارئ سريري!</h4>
+                    <p>قراءات ضغط الدم الأخيرة مسجلة في نطاق حرج ({patientData.latest_vitals.systolic}/{patientData.latest_vitals.diastolic} mmHg). يُرجى الاتصال بطبيبك فوراً أو التوجه لأقرب مركز طوارئ.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                  <CheckCircle2 size={16} />
+                  <span>المؤشرات الحيوية الأخيرة ضمن النطاق الطبيعي المستقر.</span>
+                </div>
+              )}
 
-              <div className="space-y-2 max-h-80 overflow-y-auto">
-                {patientData?.reports && patientData.reports.length > 0 ? (
-                  patientData.reports.map((r) => (
-                    <div key={r.id} className="p-4 rounded-xl bg-slate-950/60 border border-white/5 flex items-center justify-between text-xs">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-slate-400">{r.date}</span>
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            r.status === 'reviewed' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
-                          }`}>
-                            {r.status === 'reviewed' ? 'تمت مراجعة الطبيب' : 'بانتظار المراجعة'}
-                          </span>
-                        </div>
-                        {r.message && <p className="text-slate-200">{r.message}</p>}
-                        {r.latest_vitals && Object.keys(r.latest_vitals).length > 0 && (
-                          <div className="flex gap-3 text-slate-400 font-mono text-[11px] pt-1">
-                            {r.latest_vitals.systolic && <span>ضغط: {r.latest_vitals.systolic}/{r.latest_vitals.diastolic}</span>}
-                            {r.latest_vitals.sugar && <span>سكر: {r.latest_vitals.sugar}</span>}
-                            {r.latest_vitals.weight && <span>وزن: {r.latest_vitals.weight}kg</span>}
-                          </div>
-                        )}
+              {/* Latest Vitals Summary */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                {[
+                  { label: 'الضغط الانقباضي', val: patientData?.latest_vitals?.systolic, unit: 'mmHg' },
+                  { label: 'الضغط الانبساطي', val: patientData?.latest_vitals?.diastolic, unit: 'mmHg' },
+                  { label: 'سكر الدم', val: patientData?.latest_vitals?.sugar, unit: 'mg/dL' },
+                  { label: 'الوزن', val: patientData?.latest_vitals?.weight, unit: 'kg' },
+                ].map((v, i) => (
+                  <div key={i} className="p-4 rounded-xl bg-slate-950 border border-white/10">
+                    <span className="text-[11px] text-slate-400 block mb-1">{v.label}</span>
+                    <span className="text-2xl font-black text-rose-400 font-mono">{v.val !== undefined ? v.val : '—'}</span>
+                    <span className="text-[10px] text-slate-500 mr-1">{v.unit}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Previous History List */}
+            <div className="p-6 rounded-2xl bg-slate-900/80 border border-white/10 space-y-3">
+              <h3 className="text-xs font-bold text-white">سجل القياسات والبلاغات السابقة</h3>
+              <div className="space-y-2 max-h-72 overflow-y-auto">
+                {patientData?.reports?.map(r => (
+                  <div key={r.id} className="p-3.5 rounded-xl bg-slate-950/60 border border-white/5 text-xs flex justify-between items-center">
+                    <div>
+                      <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                        <span className="font-mono">{r.date}</span>
+                        {r.is_emergency && <span className="px-1.5 rounded bg-rose-500/20 text-rose-300 font-bold">تنبيه حرج</span>}
+                        <span className="px-1.5 rounded bg-white/10 text-slate-300">{r.status === 'reviewed' ? 'تمت المراجعة' : 'جديد'}</span>
                       </div>
+                      {r.latest_vitals && (
+                        <div className="text-slate-300 font-mono mt-1">
+                          ضغط: {r.latest_vitals.systolic || '—'}/{r.latest_vitals.diastolic || '—'} | سكر: {r.latest_vitals.sugar || '—'}
+                        </div>
+                      )}
                     </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-slate-500 text-center py-6">لم تقم بتسجيل أي قياسات حتى الآن.</p>
-                )}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 2: MULTIMODAL VISION AI (FOOD & LAB ANALYZER) */}
+        {/* TAB 4: GENERATE DOCTOR REPORT */}
         {/* ========================================================================= */}
-        {activeTab === 'vision' && (
-          <div className="space-y-6">
-            <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-950/90 border border-white/10 shadow-xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-semibold mb-3">
-                <Sparkles size={12} />
-                الرؤية الحاسوبية بالذكاء الاصطناعي (Gemini Vision)
-              </div>
-              <h2 className="text-xl font-bold text-white mb-2">تحليل وجبات الطعام والتحاليل الطبية</h2>
-              <p className="text-xs text-slate-400">
-                التقط صورة لطبق طعامك أو ورقة تحليلك، وسيقوم المساعد الذكي بتحليل مدى ملاءمتها لصحة قلبك وضغط دمك فوراً.
-              </p>
+        {activeTab === 'report' && (
+          <div className="p-6 rounded-2xl bg-slate-900/90 border border-white/10 space-y-4 shadow-xl">
+            <h2 className="text-xl font-bold text-white mb-1">توليد تقرير طبي موثق للطبيب</h2>
+            <p className="text-xs text-slate-400">تجميع كل قياساتك، الأمراض المزمنة، وتاريخ الأعراض في تقرير منسق جاهز للمشاركة والطباعة.</p>
 
-              <form onSubmit={handleAnalyzeImage} className="mt-6 space-y-4">
-                <div className="border-2 border-dashed border-white/15 hover:border-rose-500/50 rounded-2xl p-6 text-center transition cursor-pointer relative bg-slate-950/50">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileSelect}
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                  />
-                  {previewUrl ? (
-                    <div className="flex flex-col items-center gap-3">
-                      <img src={previewUrl} alt="Preview" className="max-h-56 rounded-xl object-contain shadow-lg" />
-                      <span className="text-xs text-rose-400 font-semibold">اضغط لتغيير الصورة</span>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="w-12 h-12 rounded-full bg-rose-500/10 text-rose-400 flex items-center justify-center mx-auto">
-                        <Upload size={20} />
-                      </div>
-                      <p className="text-sm font-semibold text-white">اضغط هنا أو اسحب الصورة للرفع</p>
-                      <p className="text-xs text-slate-400">JPG, PNG, WebP (وجبات طعام أو تقارير طبية)</p>
-                    </div>
-                  )}
-                </div>
+            <button
+              onClick={handleGenerateDoctorReport}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-rose-500/20 transition"
+            >
+              <Download size={14} />
+              <span>إنشاء تقرير طبي شامل الآن</span>
+            </button>
 
-                <div>
-                  <input
-                    type="text"
-                    value={imageNote}
-                    onChange={(e) => setImageNote(e.target.value)}
-                    placeholder="ملاحظة إضافية عن الصورة (اختياري: مثلاً 'وجبة عشاء خفيفة')..."
-                    className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50"
-                  />
-                </div>
-
+            {generatedReportText && (
+              <div className="space-y-3 pt-3">
+                <textarea
+                  readOnly
+                  rows={12}
+                  value={generatedReportText}
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl p-4 text-xs font-mono text-slate-200 leading-relaxed focus:outline-none"
+                />
                 <button
-                  type="submit"
-                  disabled={!selectedFile || isAnalyzingImage}
-                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white font-bold text-xs transition flex items-center gap-2 shadow-lg shadow-rose-500/20 disabled:opacity-50"
+                  onClick={() => {
+                    const blob = new Blob([generatedReportText], { type: 'text/plain;charset=utf-8' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `${patientId}_Patient_Clinical_Report.txt`;
+                    link.click();
+                  }}
+                  className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition flex items-center gap-2"
                 >
-                  {isAnalyzingImage ? <RefreshCw size={14} className="animate-spin" /> : <Camera size={14} />}
-                  <span>تحليل الصورة بالذكاء الاصطناعي</span>
+                  <Download size={14} />
+                  <span>تحميل كملف (.txt)</span>
                 </button>
-              </form>
-            </div>
-
-            {/* Analysis Result */}
-            {visionResult && (
-              <div className="p-6 rounded-2xl bg-slate-900/90 border border-white/10 space-y-3">
-                <h3 className="text-sm font-bold text-rose-300 flex items-center gap-2">
-                  <CheckCircle2 size={16} />
-                  نتيجة التحليل الغذائي والطبي
-                </h3>
-                <div className="text-slate-200 text-xs leading-relaxed whitespace-pre-wrap bg-slate-950/70 p-4 rounded-xl border border-white/5">
-                  {visionResult}
-                </div>
               </div>
             )}
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 3: AI PATIENT CHAT ASSISTANT */}
+        {/* TAB 5: SEND CONSULTATION TO DOCTOR */}
+        {/* ========================================================================= */}
+        {activeTab === 'consult' && (
+          <div className="p-6 rounded-2xl bg-slate-900/90 border border-white/10 space-y-4 shadow-xl">
+            <h2 className="text-xl font-bold text-white mb-1">إرسال استشارة أو بلاغ للدكتور</h2>
+            <p className="text-xs text-slate-400">أرسل استفسارك أو طلب استشارتك ليصل فوراً إلى شاشة الطبيب المعالج.</p>
+
+            {consultSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                <CheckCircle2 size={16} />
+                تم إرسال الاستشارة إلى الطبيب بنجاح!
+              </div>
+            )}
+
+            <form onSubmit={handleSendConsultation} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-white block mb-2">نوع الاستشارة:</label>
+                <div className="flex gap-4 text-xs">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="consultKind"
+                      checked={consultKind === 'consultation_routine'}
+                      onChange={() => setConsultKind('consultation_routine')}
+                      className="accent-rose-500"
+                    />
+                    <span>تقرير دوري / سؤال عادي</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="consultKind"
+                      checked={consultKind === 'consultation_urgent'}
+                      onChange={() => setConsultKind('consultation_urgent')}
+                      className="accent-rose-500"
+                    />
+                    <span className="text-rose-400 font-bold">استشارة طارئة / أعراض مقلقة</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-white block mb-1">نص الاستشارة أو السؤال:</label>
+                <textarea
+                  rows={4}
+                  value={consultMessage}
+                  onChange={(e) => setConsultMessage(e.target.value)}
+                  placeholder="اكتب استشارتك بالتفصيل هنا..."
+                  className="w-full bg-slate-950 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSendingConsult || !consultMessage.trim()}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-rose-500/20 disabled:opacity-50 transition"
+              >
+                {isSendingConsult ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
+                <span>إرسال للدكتور</span>
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 6: GENERAL AI CHAT */}
         {/* ========================================================================= */}
         {activeTab === 'chat' && (
-          <div className="h-[650px] flex flex-col rounded-2xl bg-slate-900/80 border border-white/10 overflow-hidden shadow-xl">
-            {/* Chat Messages Feed */}
+          <div className="h-[620px] flex flex-col rounded-2xl bg-slate-900/80 border border-white/10 overflow-hidden shadow-xl">
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {chatMessages.map((m, i) => (
                 <div key={i} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'}`}>
-                  <div className={`max-w-[80%] p-4 rounded-2xl text-xs leading-relaxed ${
+                  <div className={`max-w-[80%] p-3.5 rounded-2xl text-xs leading-relaxed ${
                     m.role === 'user'
-                      ? 'bg-rose-600 text-white rounded-br-none shadow-md'
-                      : 'bg-slate-950/90 text-slate-200 border border-white/10 rounded-bl-none shadow-md'
+                      ? 'bg-rose-600 text-white rounded-br-none'
+                      : 'bg-slate-950/90 text-slate-200 border border-white/10 rounded-bl-none'
                   }`}>
-                    <div className="font-bold text-[10px] text-slate-300 mb-1 opacity-75">
+                    <div className="font-bold text-[10px] text-slate-400 mb-1">
                       {m.role === 'user' ? 'أنت' : 'CardioOS Companion'}
                     </div>
                     <div className="whitespace-pre-wrap">{m.content}</div>
@@ -441,23 +782,22 @@ export default function PatientApp() {
               ))}
               {isChatSending && (
                 <div className="flex justify-end">
-                  <div className="p-3 rounded-2xl bg-slate-950/90 border border-white/10 text-xs text-slate-400 flex items-center gap-2">
+                  <div className="p-3 rounded-2xl bg-slate-950 text-xs text-slate-400 flex items-center gap-2 border border-white/10">
                     <RefreshCw size={12} className="animate-spin text-rose-400" />
-                    <span>جاري التفكير وصياغة النصيحة الطبية...</span>
+                    <span>جاري التفكير...</span>
                   </div>
                 </div>
               )}
               <div ref={chatBottomRef} />
             </div>
 
-            {/* Chat Input */}
             <form onSubmit={handleSendChat} className="p-4 bg-slate-950/80 border-t border-white/10 flex gap-2">
               <input
                 type="text"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                placeholder="اكتب استفسارك الطبي أو الصحي هنا..."
-                className="flex-1 bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50"
+                placeholder="اكتب سؤالك الصحي هنا..."
+                className="flex-1 bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
               />
               <button
                 type="submit"
@@ -472,39 +812,92 @@ export default function PatientApp() {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 4: DOCTOR NOTES & ORDERS */}
+        {/* TAB 7: GUIDELINE-BACKED EVIDENCE CONSULTATION */}
         {/* ========================================================================= */}
-        {activeTab === 'notes' && (
-          <div className="space-y-6">
-            <div className="p-6 rounded-2xl bg-slate-900/90 border border-white/10">
-              <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
-                <FileText size={20} className="text-rose-400" />
-                توجيهات وملاحظات الطبيب المعالج
-              </h2>
-              <p className="text-xs text-slate-400">
-                هنا تظهر جميع الملاحظات والتعليمات الدوائية المرسلة إليك مباشرة من طبيبك.
-              </p>
+        {activeTab === 'guidelines' && (
+          <div className="p-6 rounded-2xl bg-slate-900/90 border border-white/10 space-y-4 shadow-xl">
+            <div>
+              <h2 className="text-xl font-bold text-white mb-1">استشارة موثقة بالمراجع الطبية الرسمية (AHA / WHO)</h2>
+              <p className="text-xs text-slate-400">محرك بحث مخصص للمريض يستخرج المعلومات المعتمدة من أحدث الأدلة السريرية العالمية دون تخمين أو هلوسة.</p>
             </div>
 
-            <div className="space-y-3">
-              {patientData?.notes && patientData.notes.length > 0 ? (
-                patientData.notes.map(n => (
-                  <div key={n.id} className="p-5 rounded-2xl bg-slate-900/60 border border-white/10 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-rose-300">{n.doctor_name}</span>
-                      <span className="text-slate-400 font-mono">{n.date}</span>
+            <form onSubmit={handleSearchGuidelines} className="flex gap-2">
+              <input
+                type="text"
+                value={guidelineQuery}
+                onChange={(e) => setGuidelineQuery(e.target.value)}
+                placeholder="مثال: ما هو ضغط الدم المستهدف لمرضى القلب؟"
+                className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={isSearchingGuidelines || !guidelineQuery.trim()}
+                className="px-5 py-2.5 bg-gradient-to-r from-rose-500 to-pink-600 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 disabled:opacity-50 transition"
+              >
+                {isSearchingGuidelines ? <RefreshCw size={14} className="animate-spin" /> : <BookOpen size={14} />}
+                <span>استشارة موثقة</span>
+              </button>
+            </form>
+
+            {guidelineResult && (
+              <div className="space-y-3 pt-3">
+                <div className="p-4 rounded-xl bg-slate-950/80 border border-white/10 text-xs text-slate-200 leading-relaxed whitespace-pre-wrap">
+                  <span className="font-bold text-rose-300 block mb-2">التوصية المعتمدة:</span>
+                  {guidelineResult.answer}
+                </div>
+
+                {guidelineResult.citations?.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-slate-400">المصادر المقتبسة:</span>
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      {guidelineResult.citations.map((c, idx) => (
+                        <div key={idx} className="p-3 rounded-lg bg-slate-950 border border-white/5 text-[11px] text-slate-400">
+                          <span className="font-bold text-white block">{c.document} (صفحة {c.page})</span>
+                          <p className="mt-1 font-mono text-[10px]">{c.content}...</p>
+                        </div>
+                      ))}
                     </div>
-                    <p className="text-slate-200 text-xs leading-relaxed bg-slate-950/50 p-3 rounded-xl border border-white/5">
-                      {n.text}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 8: COMPARE WITH GENERAL POPULATION */}
+        {/* ========================================================================= */}
+        {activeTab === 'bench' && (
+          <div className="p-6 rounded-2xl bg-slate-900/90 border border-white/10 space-y-4 shadow-xl">
+            <h2 className="text-xl font-bold text-white mb-1">مقارنة قياساتك بالمعدل العام للمرضى</h2>
+            <p className="text-xs text-slate-400">تعرف على موقع قراءاتك الصحية مقارنة بمتوسط جميع المرضى المسجلين في CardioOS.</p>
+
+            {benchmarks && Object.keys(benchmarks).length > 0 ? (
+              <div className="grid sm:grid-cols-2 gap-4 pt-2">
+                {Object.entries(benchmarks).map(([k, d]) => (
+                  <div key={k} className="p-4 rounded-xl bg-slate-950 border border-white/10 space-y-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-white">{d.label}</span>
+                      <span className="text-lg font-black text-rose-400 font-mono">{d.value}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-400 text-[11px]">
+                      <span>متوسط المرضى: {d.population_avg}</span>
+                      <span className={d.delta > 0 ? 'text-amber-400' : 'text-emerald-400'}>
+                        {d.delta > 0 ? `+${d.delta}` : d.delta}
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-white/5">
+                      <div className="bg-gradient-to-r from-rose-500 to-pink-500 h-2 rounded-full" style={{ width: `${Math.min(100, Math.max(5, d.percentile))}%` }} />
+                    </div>
+                    <p className="text-[10px] text-slate-500 text-left font-mono" dir="ltr">
+                      Higher than {d.percentile}% of patients.
                     </p>
                   </div>
-                ))
-              ) : (
-                <div className="p-12 text-center text-slate-500 border border-white/5 rounded-2xl">
-                  لا توجد ملاحظات أو توجيهات جديدة من طبيبك بعد.
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500 text-center py-8">لا توجد قراءات كافية للمقارنة حالياً.</p>
+            )}
           </div>
         )}
 

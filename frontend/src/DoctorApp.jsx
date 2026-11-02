@@ -2,26 +2,36 @@ import React, { useState, useEffect } from 'react';
 import { 
   Activity, Search, Users, BarChart3, ShieldCheck, FileText, 
   Send, Download, Trash2, CheckCircle2, AlertTriangle, Clock, 
-  ChevronRight, Sparkles, UserPlus, RefreshCw, Eye
+  ChevronRight, Sparkles, UserPlus, RefreshCw, Eye, AlertOctagon, 
+  TrendingUp, Filter, ArrowUpDown, ChevronDown, CheckSquare, ShieldAlert
 } from 'lucide-react';
 import { API_BASE_URL, apiRequest } from './apiConfig';
 
 export default function DoctorApp() {
-  const [activeTab, setActiveTab] = useState('rag'); // rag | patients | bench | eval | safety
+  const [activeTab, setActiveTab] = useState('overview'); // overview | copilot | reports | bench | eval | safety
 
-  // RAG Search State
+  // Overview Data
+  const [overviewData, setOverviewData] = useState(null);
+
+  // Copilot (RAG) State
   const [query, setQuery] = useState('');
+  const [copilotPatientId, setCopilotPatientId] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResult, setSearchResult] = useState(null);
   const [searchError, setSearchError] = useState(null);
+  const [showDebugContext, setShowDebugContext] = useState(false);
 
-  // Patients State
+  // Patient Records State
   const [patients, setPatients] = useState([]);
+  const [filterChoice, setFilterChoice] = useState('all'); // all | unreviewed | critical
+  const [sortChoice, setSortChoice] = useState('recent'); // recent | alpha
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [selectedPatient, setSelectedPatient] = useState(null);
-  const [isLoadingPatient, setIsLoadingPatient] = useState(false);
+  const [patientSubTab, setPatientSubTab] = useState('reports'); // reports | trend | notes | audit | export
   const [newNote, setNewNote] = useState('');
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
+  const [aiSummary, setAiSummary] = useState(null);
+  const [isGeneratingAiSummary, setIsGeneratingAiSummary] = useState(false);
   const [exportModal, setExportModal] = useState({ open: false, content: '' });
 
   // Benchmarking State
@@ -30,19 +40,28 @@ export default function DoctorApp() {
   // Evaluation State
   const [evalData, setEvalData] = useState(null);
 
-  // Load patients on mount
   useEffect(() => {
+    fetchOverview();
     fetchPatients();
     fetchEvaluation();
   }, []);
 
-  // When selected patient changes, load profile & benchmarking
   useEffect(() => {
     if (selectedPatientId) {
       loadPatientDetails(selectedPatientId);
       loadBenchmarking(selectedPatientId);
+      setAiSummary(null);
     }
   }, [selectedPatientId]);
+
+  async function fetchOverview() {
+    try {
+      const data = await apiRequest('/api/doctor/overview');
+      setOverviewData(data);
+    } catch (err) {
+      console.error('Overview error', err);
+    }
+  }
 
   async function fetchPatients() {
     try {
@@ -50,6 +69,7 @@ export default function DoctorApp() {
       setPatients(data);
       if (data.length > 0 && !selectedPatientId) {
         setSelectedPatientId(data[0].id);
+        setCopilotPatientId(data[0].id);
       }
     } catch (err) {
       console.error('Failed to load patients', err);
@@ -57,14 +77,11 @@ export default function DoctorApp() {
   }
 
   async function loadPatientDetails(pid) {
-    setIsLoadingPatient(true);
     try {
       const data = await apiRequest(`/api/patients/${pid}`);
       setSelectedPatient(data);
     } catch (err) {
       console.error('Error fetching patient details', err);
-    } finally {
-      setIsLoadingPatient(false);
     }
   }
 
@@ -94,14 +111,16 @@ export default function DoctorApp() {
     setSearchError(null);
     setSearchResult(null);
 
+    const targetPatient = patients.find(p => p.id === copilotPatientId);
+
     try {
       const res = await apiRequest('/api/doctor/query', {
         method: 'POST',
         body: JSON.stringify({
           query: query.trim(),
-          patient_id: selectedPatientId || undefined,
-          patient_context: selectedPatient?.latest_vitals 
-            ? `Systolic: ${selectedPatient.latest_vitals.systolic || 'N/A'}, Diastolic: ${selectedPatient.latest_vitals.diastolic || 'N/A'}, Sugar: ${selectedPatient.latest_vitals.sugar || 'N/A'}`
+          patient_id: copilotPatientId || undefined,
+          patient_context: targetPatient?.latest_vitals 
+            ? `Systolic: ${targetPatient.latest_vitals.systolic || 'N/A'}, Diastolic: ${targetPatient.latest_vitals.diastolic || 'N/A'}, Sugar: ${targetPatient.latest_vitals.sugar || 'N/A'}`
             : undefined
         })
       });
@@ -110,6 +129,19 @@ export default function DoctorApp() {
       setSearchError(err.message || 'فشل في استرجاع الإجابة. تأكد من تشغيل السيرفر.');
     } finally {
       setIsSearching(false);
+    }
+  }
+
+  async function handleGenerateAiSummary() {
+    if (!selectedPatientId) return;
+    setIsGeneratingAiSummary(true);
+    try {
+      const data = await apiRequest(`/api/doctor/ai-summary/${selectedPatientId}`, { method: 'POST' });
+      setAiSummary(data.summary);
+    } catch (err) {
+      alert('فشل في توليد الملخص السريري بالذكاء الاصطناعي');
+    } finally {
+      setIsGeneratingAiSummary(false);
     }
   }
 
@@ -144,6 +176,7 @@ export default function DoctorApp() {
     try {
       await apiRequest(`/api/patients/${selectedPatientId}/reports/${reportId}/review`, { method: 'POST' });
       loadPatientDetails(selectedPatientId);
+      fetchOverview();
     } catch (err) {
       alert('فشل في تحديث حالة التقرير');
     }
@@ -159,27 +192,38 @@ export default function DoctorApp() {
     }
   }
 
+  // Filter & Sort Patients
+  const filteredPatients = patients.filter(p => {
+    if (filterChoice === 'unreviewed') return p.has_unreviewed;
+    if (filterChoice === 'critical') return p.is_critical || p.has_urgent;
+    return true;
+  }).sort((a, b) => {
+    if (sortChoice === 'alpha') return a.display_name.localeCompare(b.display_name);
+    return 0; // recent default
+  });
+
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30" dir="rtl">
-      {/* Top Navbar */}
+      {/* Header */}
       <header className="h-16 px-6 bg-slate-900/90 border-b border-white/10 backdrop-blur-md flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <img src="/cardioos_named_logo.jpg" alt="CardioOS" className="h-9 w-9 rounded-lg object-cover ring-1 ring-cyan-500/50" />
           <div>
             <h1 className="text-lg font-bold text-white flex items-center gap-2">
               Cardio<span className="text-cyan-400">OS</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-medium">Doctor Center</span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-medium">مركز قيادة الطبيب</span>
             </h1>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-1 bg-slate-950/60 p-1 rounded-xl border border-white/5">
+        {/* 6 Tabs */}
+        <div className="flex items-center gap-1 bg-slate-950/60 p-1 rounded-xl border border-white/5 overflow-x-auto max-w-2xl">
           {[
-            { id: 'rag', label: 'المساعد السريري (RAG)', icon: Search },
-            { id: 'patients', label: 'إدارة المرضى', icon: Users },
-            { id: 'bench', label: 'المقارنة المجتمعية', icon: BarChart3 },
-            { id: 'eval', label: 'لوحة التقييم', icon: Activity },
+            { id: 'overview', label: 'نظرة عامة', icon: Activity },
+            { id: 'copilot', label: 'المستشار الطبي (RAG)', icon: Search },
+            { id: 'reports', label: 'ملفات المرضى', icon: Users },
+            { id: 'bench', label: 'مقارنة المرضى', icon: BarChart3 },
+            { id: 'eval', label: 'لوحة التقييم', icon: TrendingUp },
             { id: 'safety', label: 'معايير الأمان', icon: ShieldCheck },
           ].map(tab => {
             const Icon = tab.icon;
@@ -188,7 +232,7 @@ export default function DoctorApp() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                   isActive 
                     ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20' 
                     : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -212,124 +256,234 @@ export default function DoctorApp() {
       <main className="flex-1 max-w-7xl w-full mx-auto p-6">
         
         {/* ========================================================================= */}
-        {/* TAB 1: CLINICAL RAG SEARCH */}
+        {/* TAB 1: OVERVIEW DASHBOARD */}
         {/* ========================================================================= */}
-        {activeTab === 'rag' && (
+        {activeTab === 'overview' && overviewData && (
+          <div className="space-y-6">
+            {/* Stat Tiles */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-500/15 to-slate-900 border border-blue-500/30">
+                <span className="text-3xl font-black text-blue-400 font-mono block mb-1">{overviewData.total_patients}</span>
+                <span className="text-xs text-slate-300 font-semibold">إجمالي المرضى المسجلين</span>
+              </div>
+              <div className={`p-5 rounded-2xl bg-gradient-to-br ${overviewData.urgent_count > 0 ? 'from-rose-500/25 to-slate-900 border-rose-500/40 animate-pulse' : 'from-emerald-500/15 to-slate-900 border-emerald-500/30'}`}>
+                <span className={`text-3xl font-black font-mono block mb-1 ${overviewData.urgent_count > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                  {overviewData.urgent_count}
+                </span>
+                <span className="text-xs text-slate-300 font-semibold">حالات طارئة تحتاج مراجعة</span>
+              </div>
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-purple-500/15 to-slate-900 border border-purple-500/30">
+                <span className="text-3xl font-black text-purple-400 font-mono block mb-1">{overviewData.new_reports_count}</span>
+                <span className="text-xs text-slate-300 font-semibold">تقارير جديدة لم تراجع</span>
+              </div>
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-500/15 to-slate-900 border border-emerald-500/30">
+                <span className="text-3xl font-black text-emerald-400 font-mono block mb-1">{overviewData.total_reports_count}</span>
+                <span className="text-xs text-slate-300 font-semibold">إجمالي التقارير المستلمة</span>
+              </div>
+            </div>
+
+            {/* Urgent Alert Banner */}
+            {overviewData.urgent_count > 0 && (
+              <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertOctagon size={18} className="animate-bounce" />
+                  <span className="font-bold">تنبيه سريري عاجل:</span>
+                  <span>يوجد {overviewData.urgent_count} بلاغ/استشارة طارئة من المرضى بانتظار مراجعتك الفورية!</span>
+                </div>
+                <button
+                  onClick={() => { setActiveTab('reports'); setFilterChoice('critical'); }}
+                  className="px-3 py-1 bg-rose-500 text-white rounded-lg font-bold text-xs hover:bg-rose-600 transition"
+                >
+                  فحص الحالات الآن
+                </button>
+              </div>
+            )}
+
+            {/* Live Activity Feed */}
+            <div className="p-6 rounded-2xl bg-slate-900/80 border border-white/10 space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                  <Activity size={16} className="text-cyan-400" />
+                  آخر النشاطات وبلاغات المرضى في الوقت الفعلي
+                </h3>
+                <span className="text-xs px-2.5 py-1 rounded-lg bg-white/5 text-slate-400 border border-white/5">
+                  تحديث لحظي
+                </span>
+              </div>
+
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {overviewData.activity_feed?.length > 0 ? (
+                  overviewData.activity_feed.map((act, i) => (
+                    <div key={i} className="p-3.5 rounded-xl bg-slate-950/60 border border-white/5 flex items-center justify-between text-xs">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-white">{act.patient_name || act._patient_key}</span>
+                          <span className="font-mono text-slate-500">{act.date}</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            act.kind === 'consultation_urgent' ? 'bg-rose-500/20 text-rose-300' : 'bg-blue-500/20 text-blue-300'
+                          }`}>
+                            {act.kind === 'consultation_urgent' ? 'طارئ' : 'دوري'}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            act.status === 'reviewed' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
+                          }`}>
+                            {act.status === 'reviewed' ? 'تمت المراجعة' : 'جديد'}
+                          </span>
+                        </div>
+                        {act.message && <p className="text-slate-300">{act.message}</p>}
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedPatientId(act._patient_key);
+                          setActiveTab('reports');
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition text-xs"
+                      >
+                        عرض الملف
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500 text-center py-8">لا توجد نشاطات مسجلة بعد.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB 2: CLINICAL COPILOT (RAG SEARCH) */}
+        {/* ========================================================================= */}
+        {activeTab === 'copilot' && (
           <div className="space-y-6">
             <div className="bg-gradient-to-br from-slate-900/90 to-slate-950/90 border border-white/10 p-6 rounded-2xl shadow-xl">
               <div className="max-w-3xl">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-semibold mb-3">
                   <Sparkles size={12} />
-                  محرك البحث السريري الموثوق (Zero Hallucination)
+                  المستشار السريري الموثوق بالأدلة (WHO / AHA / NICE)
                 </div>
-                <h2 className="text-2xl font-black text-white mb-2">استفسار سريري موثق بالأدلة</h2>
-                <p className="text-sm text-slate-400">
-                  اطرح أي سؤال طبي معقد؛ يقوم النظام باستخراج التوصية الدقيقة مباشرة من أدلة منظمة الصحة العالمية (WHO) وجمعية القلب الأمريكية (AHA) مع ذكر الصفحة والمصدر.
+                <h2 className="text-2xl font-black text-white mb-2">استفسار سريري موثق</h2>
+                <p className="text-xs text-slate-400">
+                  ربط استفسارك السريري بأدلة منظمة الصحة العالمية والجمعيات العالمية مع إمكانية ربط السؤال بحالة مريض محدد.
                 </p>
               </div>
 
+              {/* Patient Context Selector */}
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <span className="text-xs text-slate-400 font-semibold">تخصيص السؤال لمريض معين (اختياري):</span>
+                <select
+                  value={copilotPatientId}
+                  onChange={(e) => setCopilotPatientId(e.target.value)}
+                  className="bg-slate-950 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
+                >
+                  <option value="">-- بدون سياق مريض (سؤال عام) --</option>
+                  {patients.map(p => (
+                    <option key={p.id} value={p.id}>{p.display_name} (ضغط: {p.latest_vitals?.systolic || '—'}/{p.latest_vitals?.diastolic || '—'})</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Quick Questions Dropdown */}
+              <div className="mt-3 flex items-center gap-2">
+                <span className="text-xs text-slate-400 font-semibold">أسئلة سريرية سريعة:</span>
+                <select
+                  onChange={(e) => { if (e.target.value) setQuery(e.target.value); }}
+                  className="bg-slate-950 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-300 focus:outline-none max-w-md"
+                >
+                  <option value="">-- اختر سؤالاً نموذجياً --</option>
+                  <option value="What is the recommended target blood pressure for adults with cardiovascular disease?">ما هو ضغط الدم المستهدف لمرضى القلب والأوعية؟</option>
+                  <option value="ما هي أدوية الخط الأول الموصى بها لعلاج ارتفاع ضغط الدم وفق WHO 2021؟">أدوية الخط الأول لارتفاع ضغط الدم (WHO 2021)</option>
+                  <option value="ما هي معايير تشخيص وعلاج قصور القلب الانقباضي (HFrEF) حسب AHA؟">معايير علاج قصور القلب (AHA Guidelines)</option>
+                </select>
+              </div>
+
               {/* Search Form */}
-              <form onSubmit={handleSearch} className="mt-6 flex gap-3">
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="مثال: ما هو ضغط الدم المستهدف لمرضى القلب والسكري؟ أو الجرعة الموصى بها للضغط..."
-                    className="w-full bg-slate-950/80 border border-white/15 rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                  />
-                </div>
+              <form onSubmit={handleSearch} className="mt-5 flex gap-3">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="اكتب استفسارك الطبي السريري هنا..."
+                  className="flex-1 bg-slate-950/80 border border-white/15 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                />
                 <button
                   type="submit"
                   disabled={isSearching || !query.trim()}
-                  className="px-6 py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-sm rounded-xl transition shadow-lg shadow-cyan-500/25 flex items-center gap-2 disabled:opacity-50"
+                  className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-cyan-500/25 flex items-center gap-2 disabled:opacity-50"
                 >
-                  {isSearching ? <RefreshCw size={16} className="animate-spin" /> : <Search size={16} />}
-                  <span>بحث واسترجاع</span>
+                  {isSearching ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
+                  <span>تنفيذ الاسترجاع السريري</span>
                 </button>
               </form>
-
-              {/* Suggestions */}
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                <span className="font-semibold text-slate-500">أمثلة سريعة:</span>
-                {[
-                  'What is target blood pressure for adults with cardiovascular disease?',
-                  'ما هي أدوية الخط الأول لعلاج ارتفاع ضغط الدم وفق إرشادات WHO؟',
-                  'كيف يتم تصنيف مراحل قصور القلب حسب إرشادات AHA؟'
-                ].map((s, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => { setQuery(s); }}
-                    className="px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 text-slate-300 border border-white/5 transition"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
             </div>
 
-            {/* Error Message */}
             {searchError && (
-              <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-center gap-3">
-                <AlertTriangle size={18} />
+              <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-3">
+                <AlertTriangle size={16} />
                 <span>{searchError}</span>
               </div>
             )}
 
-            {/* Result Display */}
             {searchResult && (
-              <div className="space-y-6">
-                {/* Status Badges */}
+              <div className="space-y-4">
+                {/* Confidence & Badges */}
                 <div className="flex flex-wrap items-center gap-3">
                   {searchResult.refused ? (
-                    <div className="px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-bold flex items-center gap-2">
+                    <div className="px-4 py-2 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs font-bold flex items-center gap-2">
                       <AlertTriangle size={14} />
-                      تم تفعيل حاجز الأمان السريري (Refusal Triggered - لا توجد أدلة كافية)
+                      تم تفعيل حاجز الأمان السريري (Refusal Triggered - لا توجد أدلة مطابقة في المراجع)
                     </div>
                   ) : (
                     <>
-                      <div className="px-3.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-2">
+                      <div className="px-3.5 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-2">
                         <CheckCircle2 size={14} />
-                        درجة الثقة السريرية: {(searchResult.confidence_score * 100).toFixed(0)}%
+                        نسبة الثقة السريرية: {(searchResult.confidence_score * 100).toFixed(0)}%
                       </div>
-                      <div className="px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs font-semibold flex items-center gap-1.5">
+                      <div className="px-3 py-1.5 rounded-lg bg-blue-500/15 border border-blue-500/20 text-blue-300 text-xs font-semibold flex items-center gap-1.5">
                         <Clock size={12} />
-                        سرعة الاسترجاع: {searchResult.elapsed_seconds} ثانية
+                        زمن الاستجابة: {searchResult.elapsed_seconds} ثانية
                       </div>
-                      <div className="px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold">
+                      <div className="px-3 py-1.5 rounded-lg bg-purple-500/15 border border-purple-500/20 text-purple-300 text-xs font-semibold">
                         Post-Hoc Claim Validation: مجاز (Faithfulness 1.0)
                       </div>
                     </>
                   )}
                 </div>
 
-                {/* Main Recommendation */}
-                <div className="bg-slate-900/90 border border-white/10 p-6 rounded-2xl shadow-xl">
-                  <h3 className="text-base font-bold text-cyan-300 mb-3 flex items-center gap-2">
-                    <FileText size={16} />
-                    التوصية السريرية المعتمدة (Clinical Recommendation)
-                  </h3>
-                  <div className="text-slate-200 text-sm leading-relaxed whitespace-pre-wrap bg-slate-950/60 p-4 rounded-xl border border-white/5">
+                {/* Recommendation Card */}
+                <div className="bg-slate-900/90 border border-white/10 p-6 rounded-2xl shadow-xl space-y-3">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-sm font-bold text-cyan-300 flex items-center gap-2">
+                      <FileText size={16} />
+                      التوصية السريرية المعتمدة
+                    </h3>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(searchResult.answer)}
+                      className="text-xs px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition"
+                    >
+                      نسخ التوصية
+                    </button>
+                  </div>
+                  <div className="text-slate-200 text-xs leading-relaxed whitespace-pre-wrap bg-slate-950/70 p-4 rounded-xl border border-white/5 font-sans">
                     {searchResult.answer}
                   </div>
                 </div>
 
-                {/* Citations & Evidence Chunks */}
-                {searchResult.citations && searchResult.citations.length > 0 && (
+                {/* Retrieved Citations */}
+                {searchResult.citations?.length > 0 && (
                   <div className="space-y-3">
-                    <h4 className="text-sm font-bold text-slate-300 flex items-center gap-2">
-                      <ShieldCheck size={16} className="text-cyan-400" />
-                      المصادر والاقتباسات المسترجعة (Retrieved Evidence)
+                    <h4 className="text-xs font-bold text-slate-300 flex items-center gap-2">
+                      <ShieldCheck size={14} className="text-cyan-400" />
+                      الأدلة والمصادر المسترجعة (Retrieved Evidence)
                     </h4>
-                    <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid md:grid-cols-2 gap-3">
                       {searchResult.citations.map((cite) => (
-                        <div key={cite.id} className="p-4 rounded-xl bg-slate-900/60 border border-white/10 space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-bold text-cyan-300">مرجع [{cite.id}]: {cite.document}</span>
-                            <span className="px-2 py-0.5 rounded bg-white/5 text-slate-400 font-mono">صفحة: {cite.page}</span>
+                        <div key={cite.id} className="p-3.5 rounded-xl bg-slate-900/60 border border-white/10 space-y-1.5">
+                          <div className="flex justify-between text-xs">
+                            <span className="font-bold text-cyan-300">{cite.document}</span>
+                            <span className="px-2 py-0.5 rounded bg-white/5 text-slate-400 font-mono text-[10px]">صفحة: {cite.page}</span>
                           </div>
-                          <p className="text-xs text-slate-400 font-mono leading-relaxed bg-slate-950/70 p-2.5 rounded-lg border border-white/5">
+                          <p className="text-[11px] text-slate-400 font-mono leading-relaxed bg-slate-950/70 p-2 rounded-lg border border-white/5">
                             {cite.snippet}
                           </p>
                         </div>
@@ -337,213 +491,282 @@ export default function DoctorApp() {
                     </div>
                   </div>
                 )}
-
-                {/* Disclaimer */}
-                <div className="p-3.5 rounded-xl bg-amber-500/5 border border-amber-500/20 text-amber-200/80 text-xs leading-relaxed">
-                  ⚠️ <b>Responsible AI Disclaimer:</b> هذا النظام مصمم كأداة مساعدة للقرار الطبي وليس بديلاً عن التقدير السريري للطبيب. تجنب الاعتماد التلقائي الأعمى (Automation Bias).
-                </div>
               </div>
             )}
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 2: PATIENTS COMMAND CENTER */}
+        {/* TAB 3: PATIENT MANAGEMENT & REPORTS */}
         {/* ========================================================================= */}
-        {activeTab === 'patients' && (
+        {activeTab === 'reports' && (
           <div className="grid md:grid-cols-3 gap-6">
-            {/* Left Column: Patients List */}
+            {/* Left: Patient List with Filters */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold text-white text-base">قائمة المرضى المسجلين</h3>
-                <span className="text-xs px-2 py-0.5 rounded bg-white/10 text-slate-300">{patients.length} مريض</span>
+              <div className="p-4 rounded-2xl bg-slate-900/80 border border-white/10 space-y-3">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-bold text-sm text-white">سجلات المرضى</h3>
+                  <span className="text-xs text-slate-400">{filteredPatients.length} مريض</span>
+                </div>
+
+                {/* Filter & Sort Controls */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <label className="text-[10px] text-slate-400 block mb-1">فلترة:</label>
+                    <select
+                      value={filterChoice}
+                      onChange={(e) => setFilterChoice(e.target.value)}
+                      className="w-full bg-slate-950 border border-white/10 rounded-lg p-1.5 text-slate-200 text-xs focus:outline-none"
+                    >
+                      <option value="all">كل المرضى</option>
+                      <option value="unreviewed">تقارير جديدة</option>
+                      <option value="critical">حالات حرجة / طارئة</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 block mb-1">ترتيب:</label>
+                    <select
+                      value={sortChoice}
+                      onChange={(e) => setSortChoice(e.target.value)}
+                      className="w-full bg-slate-950 border border-white/10 rounded-lg p-1.5 text-slate-200 text-xs focus:outline-none"
+                    >
+                      <option value="recent">الأحدث نشاطاً</option>
+                      <option value="alpha">أبجدياً (أ-ي)</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-                {patients.map(p => (
+              {/* Patients List */}
+              <div className="space-y-2 max-h-[550px] overflow-y-auto">
+                {filteredPatients.map(p => (
                   <button
                     key={p.id}
                     onClick={() => setSelectedPatientId(p.id)}
-                    className={`w-full text-right p-4 rounded-xl border transition-all flex items-center justify-between ${
+                    className={`w-full text-right p-3.5 rounded-xl border transition-all flex items-center justify-between ${
                       selectedPatientId === p.id 
                         ? 'bg-gradient-to-r from-cyan-950/60 to-slate-900 border-cyan-500/40 ring-1 ring-cyan-500/30' 
                         : 'bg-slate-900/60 border-white/5 hover:border-white/15'
                     }`}
                   >
                     <div>
-                      <h4 className="font-bold text-sm text-white">{p.display_name}</h4>
-                      <div className="text-xs text-slate-400 mt-1 flex items-center gap-2">
-                        <span>تسجيل: {p.registered_at || 'حديث'}</span>
-                        {p.has_unreviewed && (
-                          <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[10px] font-semibold">تقرير جديد</span>
+                      <h4 className="font-bold text-xs text-white">{p.display_name}</h4>
+                      <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
+                        {p.latest_vitals?.systolic ? (
+                          <span>ضغط: {p.latest_vitals.systolic}/{p.latest_vitals.diastolic}</span>
+                        ) : (
+                          <span>لا توجد قياسات</span>
                         )}
+                        {p.has_urgent && <span className="px-1 rounded bg-rose-500/20 text-rose-300 text-[10px]">طارئ</span>}
+                        {p.has_unreviewed && !p.has_urgent && <span className="px-1 rounded bg-amber-500/20 text-amber-300 text-[10px]">جديد</span>}
                       </div>
                     </div>
-                    <ChevronRight size={16} className={selectedPatientId === p.id ? 'text-cyan-400' : 'text-slate-600'} />
+                    <ChevronRight size={14} className={selectedPatientId === p.id ? 'text-cyan-400' : 'text-slate-600'} />
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Right Columns: Selected Patient Details */}
-            <div className="md:col-span-2 space-y-6">
+            {/* Right: Selected Patient Details with Sub-tabs */}
+            <div className="md:col-span-2 space-y-4">
               {selectedPatient ? (
                 <>
-                  {/* Header & Export */}
-                  <div className="flex flex-wrap items-center justify-between gap-4 p-5 rounded-2xl bg-slate-900/80 border border-white/10">
+                  {/* Top Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-slate-900/80 border border-white/10">
                     <div>
-                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        {selectedPatient.display_name}
-                        <span className="text-xs text-slate-400 font-mono">({selectedPatient.id})</span>
-                      </h2>
-                      <p className="text-xs text-slate-400 mt-0.5">آخر تحديث ومزامنة لحظية للملف السريري</p>
+                      <h3 className="font-bold text-base text-white">{selectedPatient.display_name}</h3>
+                      <p className="text-xs text-slate-400">معرف المريض: {selectedPatient.id}</p>
                     </div>
 
-                    <button
-                      onClick={handleExportSummary}
-                      className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white text-xs font-bold transition flex items-center gap-2"
-                    >
-                      <Download size={14} />
-                      تصدير ملخص سريري شامل (PDF-ready)
-                    </button>
-                  </div>
-
-                  {/* Vitals Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {[
-                      { key: 'systolic', label: 'ضغط انقباضي', unit: 'mmHg', color: 'from-rose-500/20 to-rose-600/10' },
-                      { key: 'diastolic', label: 'ضغط انبساطي', unit: 'mmHg', color: 'from-amber-500/20 to-amber-600/10' },
-                      { key: 'sugar', label: 'سكر الدم', unit: 'mg/dL', color: 'from-blue-500/20 to-blue-600/10' },
-                      { key: 'weight', label: 'الوزن', unit: 'kg', color: 'from-emerald-500/20 to-emerald-600/10' },
-                    ].map(v => {
-                      const val = selectedPatient.latest_vitals?.[v.key];
-                      return (
-                        <div key={v.key} className={`p-4 rounded-xl bg-gradient-to-br ${v.color} border border-white/10`}>
-                          <span className="text-xs text-slate-400 block mb-1">{v.label}</span>
-                          <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-black text-white">{val !== undefined ? val : '—'}</span>
-                            <span className="text-[10px] text-slate-400 font-mono">{v.unit}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Add Doctor Clinical Note */}
-                  <div className="p-5 rounded-2xl bg-slate-900/80 border border-white/10 space-y-3">
-                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <FileText size={16} className="text-cyan-400" />
-                      إضافة ملاحظة / توجيه طبي للمريض
-                    </h4>
                     <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={newNote}
-                        onChange={(e) => setNewNote(e.target.value)}
-                        placeholder="اكتب التوجيه أو التعديل الدوائي هنا..."
-                        className="flex-1 bg-slate-950/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                      />
                       <button
-                        onClick={handleAddNote}
-                        disabled={isSubmittingNote || !newNote.trim()}
-                        className="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition flex items-center gap-1.5 disabled:opacity-50"
+                        onClick={handleGenerateAiSummary}
+                        disabled={isGeneratingAiSummary}
+                        className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-purple-500/20 disabled:opacity-50"
                       >
-                        <Send size={14} />
-                        إرسال
+                        {isGeneratingAiSummary ? <RefreshCw size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                        <span>تلخيص ذكي للحالة</span>
+                      </button>
+                      <button
+                        onClick={handleExportSummary}
+                        className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition flex items-center gap-1.5"
+                      >
+                        <Download size={12} />
+                        <span>تصدير تقرير شامل</span>
                       </button>
                     </div>
-
-                    {/* Existing Doctor Notes */}
-                    <div className="space-y-2 mt-4">
-                      {selectedPatient.notes && selectedPatient.notes.map(n => (
-                        <div key={n.id} className="p-3 rounded-xl bg-slate-950/60 border border-white/5 flex items-start justify-between text-xs">
-                          <div>
-                            <div className="flex items-center gap-2 text-slate-400 mb-1">
-                              <span className="font-bold text-cyan-300">{n.doctor_name}</span>
-                              <span>• {n.date}</span>
-                            </div>
-                            <p className="text-slate-200">{n.text}</p>
-                          </div>
-                          <button onClick={() => handleDeleteNote(n.id)} className="text-slate-500 hover:text-rose-400 transition p-1">
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
                   </div>
 
-                  {/* Patient Reports / Journal */}
-                  <div className="p-5 rounded-2xl bg-slate-900/80 border border-white/10 space-y-3">
-                    <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Activity size={16} className="text-cyan-400" />
-                      يوميات وبلاغات المريض (Patient Reports)
-                    </h4>
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {/* AI Summary Box */}
+                  {aiSummary && (
+                    <div className="p-4 rounded-xl bg-purple-950/40 border border-purple-500/30 space-y-2">
+                      <h4 className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                        <Sparkles size={14} />
+                        الملخص السريري الذكي للحالة (AI Executive Summary)
+                      </h4>
+                      <p className="text-xs text-slate-200 leading-relaxed whitespace-pre-wrap">{aiSummary}</p>
+                    </div>
+                  )}
+
+                  {/* Sub-tabs Navigation */}
+                  <div className="flex gap-1 bg-slate-950/60 p-1 rounded-xl border border-white/5 text-xs">
+                    {[
+                      { id: 'reports', label: 'التقارير والشكاوى' },
+                      { id: 'trend', label: 'المسار البياني (Trends)' },
+                      { id: 'notes', label: 'ملاحظات الطبيب' },
+                      { id: 'audit', label: 'سجل التدقيق (Audit)' },
+                    ].map(st => (
+                      <button
+                        key={st.id}
+                        onClick={() => setPatientSubTab(st.id)}
+                        className={`flex-1 py-1.5 rounded-lg font-semibold transition ${
+                          patientSubTab === st.id ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {st.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Sub-tab 1: Reports List */}
+                  {patientSubTab === 'reports' && (
+                    <div className="space-y-2">
                       {selectedPatient.reports?.length > 0 ? (
                         selectedPatient.reports.map(r => (
-                          <div key={r.id} className="p-3 rounded-xl bg-slate-950/60 border border-white/5 flex items-start justify-between text-xs">
-                            <div>
-                              <div className="flex items-center gap-2 text-slate-400 mb-1">
-                                <span className="font-mono">{r.date}</span>
+                          <div key={r.id} className="p-3.5 rounded-xl bg-slate-900/60 border border-white/5 space-y-1 text-xs">
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-slate-400">{r.date}</span>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  r.kind === 'consultation_urgent' ? 'bg-rose-500/20 text-rose-300' : 'bg-blue-500/20 text-blue-300'
+                                }`}>
+                                  {r.kind === 'consultation_urgent' ? 'طارئ' : 'دوري'}
+                                </span>
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                                   r.status === 'reviewed' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
                                 }`}>
                                   {r.status === 'reviewed' ? 'تمت المراجعة' : 'جديد'}
                                 </span>
                               </div>
-                              <p className="text-slate-200">{r.message || 'تسجيل قياسات حيوية دورية'}</p>
+                              {r.status !== 'reviewed' && (
+                                <button
+                                  onClick={() => handleReviewReport(r.id)}
+                                  className="px-2 py-1 rounded bg-white/10 hover:bg-white/15 text-slate-200 text-[10px]"
+                                >
+                                  تعليم كمُراجع
+                                </button>
+                              )}
                             </div>
-                            {r.status !== 'reviewed' && (
-                              <button
-                                onClick={() => handleReviewReport(r.id)}
-                                className="px-2.5 py-1 rounded bg-white/10 hover:bg-white/15 text-slate-300 transition text-[11px]"
-                              >
-                                تعليم كمُراجع
-                              </button>
+                            {r.message && <p className="text-slate-200">{r.message}</p>}
+                            {r.latest_vitals && (
+                              <div className="text-[11px] text-slate-400 font-mono">
+                                قياسات: {JSON.stringify(r.latest_vitals)}
+                              </div>
                             )}
                           </div>
                         ))
                       ) : (
-                        <p className="text-xs text-slate-500 text-center py-4">لا توجد تقارير مسجلة للمريض حتى الآن.</p>
+                        <p className="text-xs text-slate-500 text-center py-6">لا توجد تقارير مسجلة للمريض.</p>
                       )}
                     </div>
-                  </div>
+                  )}
 
-                  {/* Audit Trail */}
-                  <div className="p-5 rounded-2xl bg-slate-900/80 border border-white/10 space-y-2">
-                    <h4 className="text-xs font-bold text-slate-400 flex items-center gap-2">
-                      <ShieldCheck size={14} />
-                      سجل التدقيق الطبي (Audit Trail)
-                    </h4>
-                    <div className="space-y-1.5 max-h-36 overflow-y-auto font-mono text-[11px]">
+                  {/* Sub-tab 2: Trend Charts */}
+                  {patientSubTab === 'trend' && (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        {['systolic', 'diastolic', 'sugar', 'weight'].map(field => {
+                          const trendList = selectedPatient.trends?.[field] || [];
+                          return (
+                            <div key={field} className="p-3.5 rounded-xl bg-slate-900/60 border border-white/5 space-y-2 text-xs">
+                              <span className="font-bold text-slate-300 capitalize">{field} History</span>
+                              {trendList.length > 0 ? (
+                                <div className="space-y-1 max-h-36 overflow-y-auto font-mono text-[11px]">
+                                  {trendList.map(([d, val], i) => (
+                                    <div key={i} className="flex justify-between text-slate-400 py-0.5 border-b border-white/5">
+                                      <span>{d}</span>
+                                      <span className="text-cyan-400 font-bold">{val}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-slate-500 text-[10px]">لا توجد قراءات مسجلة.</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sub-tab 3: Doctor Notes */}
+                  {patientSubTab === 'notes' && (
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newNote}
+                          onChange={(e) => setNewNote(e.target.value)}
+                          placeholder="اكتب ملاحظة أو توجيه دوائي هنا..."
+                          className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                        />
+                        <button
+                          onClick={handleAddNote}
+                          disabled={isSubmittingNote || !newNote.trim()}
+                          className="px-4 py-2 bg-cyan-500 text-slate-950 font-bold rounded-xl text-xs disabled:opacity-50"
+                        >
+                          إضافة
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        {selectedPatient.notes?.map(n => (
+                          <div key={n.id} className="p-3 rounded-xl bg-slate-950/60 border border-white/5 flex justify-between text-xs">
+                            <div>
+                              <div className="flex items-center gap-2 text-slate-400 text-[10px]">
+                                <span className="font-bold text-cyan-300">{n.doctor_name}</span>
+                                <span>{n.date}</span>
+                              </div>
+                              <p className="text-slate-200 mt-1">{n.text}</p>
+                            </div>
+                            <button onClick={() => handleDeleteNote(n.id)} className="text-slate-500 hover:text-rose-400">
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sub-tab 4: Audit Trail */}
+                  {patientSubTab === 'audit' && (
+                    <div className="p-4 rounded-xl bg-slate-950/60 border border-white/5 space-y-1 font-mono text-[11px] max-h-80 overflow-y-auto">
                       {selectedPatient.audit_log?.map((a, i) => (
-                        <div key={i} className="flex items-center gap-3 text-slate-400 py-1 border-b border-white/5">
-                          <span className="text-cyan-400/80">{a.date}</span>
+                        <div key={i} className="flex items-center gap-2 py-1 text-slate-400 border-b border-white/5">
+                          <span className="text-cyan-400">{a.date}</span>
                           <span className="text-slate-200 font-semibold">{a.actor}:</span>
                           <span>{a.action}</span>
                         </div>
                       ))}
                     </div>
-                  </div>
+                  )}
                 </>
               ) : (
-                <div className="p-12 text-center text-slate-500 border border-white/5 rounded-2xl">
-                  اختر مريضاً من القائمة الجانبية لعرض ملفه الطبي.
-                </div>
+                <div className="p-12 text-center text-slate-500">اختر مريضاً من القائمة الجانبية.</div>
               )}
             </div>
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 3: POPULATION BENCHMARKING */}
+        {/* TAB 4: POPULATION BENCHMARKING */}
         {/* ========================================================================= */}
         {activeTab === 'bench' && (
           <div className="space-y-6">
             <div className="p-6 rounded-2xl bg-slate-900/90 border border-white/10">
-              <h2 className="text-xl font-bold text-white mb-2">المقارنة السكانية الذكية (Population Benchmarking)</h2>
-              <p className="text-sm text-slate-400">
-                مقارنة القياسات الحيوية للمريض المختار ({selectedPatient?.display_name || 'المريض'}) مع جميع المرضى المسجلين بالنظام لحساب الشريحة المئوية (Percentiles) ومعدل الانحراف.
+              <h2 className="text-xl font-bold text-white mb-1">المقارنة السكانية الذكية (Population Benchmarking)</h2>
+              <p className="text-xs text-slate-400">
+                مقارنة قياسات المريض ({selectedPatient?.display_name || 'المريض'}) مع جميع المرضى المسجلين لحساب الشريحة المئوية والانحراف.
               </p>
             </div>
 
@@ -554,7 +777,7 @@ export default function DoctorApp() {
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="font-bold text-sm text-white">{data.label}</h4>
-                        <span className="text-xs text-slate-400">مقارنة مع {data.total_patients} مريض مسجل</span>
+                        <span className="text-xs text-slate-400">مقارنة مع {data.total_patients} مريض</span>
                       </div>
                       <span className="text-2xl font-black text-cyan-400 font-mono">{data.value}</span>
                     </div>
@@ -566,15 +789,13 @@ export default function DoctorApp() {
                           {data.delta > 0 ? `+${data.delta}` : data.delta} عن المتوسط
                         </span>
                       </div>
-
-                      {/* Percentile Bar */}
                       <div className="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-white/5">
                         <div 
-                          className="bg-gradient-to-r from-cyan-500 to-blue-500 h-2.5 rounded-full transition-all duration-500" 
+                          className="bg-gradient-to-r from-cyan-500 to-blue-500 h-2.5 rounded-full" 
                           style={{ width: `${Math.min(100, Math.max(5, data.percentile))}%` }}
                         />
                       </div>
-                      <p className="text-[11px] text-slate-400 text-left" dir="ltr">
+                      <p className="text-[11px] text-slate-400 text-left font-mono" dir="ltr">
                         Higher than {data.percentile}% of registered population.
                       </p>
                     </div>
@@ -583,81 +804,74 @@ export default function DoctorApp() {
               </div>
             ) : (
               <div className="p-12 text-center text-slate-500 border border-white/5 rounded-2xl">
-                لا توجد قياسات مسجلة كافية لهذا المريض لحساب المقارنة السكانية.
+                لا توجد بيانات كافية لهذا المريض للمقارنة.
               </div>
             )}
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 4: EVALUATION DASHBOARD */}
+        {/* TAB 5: EVALUATION DASHBOARD */}
         {/* ========================================================================= */}
-        {activeTab === 'eval' && (
+        {activeTab === 'eval' && evalData && (
           <div className="space-y-6">
             <div className="p-6 rounded-2xl bg-slate-900/90 border border-white/10">
-              <h2 className="text-xl font-bold text-white mb-2">لوحة تقييم الدقة والأمان (Evaluation Metrics)</h2>
-              <p className="text-sm text-slate-400">
-                نتائج التقييم الداخلي لمحرك RAG وفق معايير مسابقة الهاكاثون (الاسترجاع، وقت الاستجابة، ونسبة أمان الردود).
+              <h2 className="text-xl font-bold text-white mb-1">لوحة تقييم الدقة والأمان السريري</h2>
+              <p className="text-xs text-slate-400">
+                مؤشرات أداء محرك RAG وفق الاختبارات والمعايير السريرية للهاكاثون.
               </p>
             </div>
 
-            {evalData && (
-              <>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="p-5 rounded-2xl bg-slate-900/70 border border-white/10">
-                    <span className="text-xs text-slate-400 block mb-1">دقة الاسترجاع (Hit Rate@k)</span>
-                    <span className="text-3xl font-black text-cyan-400 font-mono">
-                      {((evalData.metrics.precision_at_k || 1.0) * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                  <div className="p-5 rounded-2xl bg-slate-900/70 border border-white/10">
-                    <span className="text-xs text-slate-400 block mb-1">معدل الأمان السريري (Safety Rate)</span>
-                    <span className="text-3xl font-black text-emerald-400 font-mono">
-                      {((evalData.metrics.safety_pass_rate || 1.0) * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                  <div className="p-5 rounded-2xl bg-slate-900/70 border border-white/10">
-                    <span className="text-xs text-slate-400 block mb-1">متوسط سرعة الاستجابة</span>
-                    <span className="text-3xl font-black text-blue-400 font-mono">
-                      {evalData.metrics.avg_response_time_sec || 0.12} ث
-                    </span>
-                  </div>
-                  <div className="p-5 rounded-2xl bg-slate-900/70 border border-white/10">
-                    <span className="text-xs text-slate-400 block mb-1">تطابق المحتوى (Faithfulness)</span>
-                    <span className="text-3xl font-black text-purple-400 font-mono">
-                      {((evalData.metrics.content_hit_rate || 1.0) * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-5 rounded-2xl bg-slate-900/70 border border-white/10">
+                <span className="text-xs text-slate-400 block mb-1">Hit Rate@k</span>
+                <span className="text-3xl font-black text-cyan-400 font-mono">
+                  {((evalData.metrics.precision_at_k || 1.0) * 100).toFixed(0)}%
+                </span>
+              </div>
+              <div className="p-5 rounded-2xl bg-slate-900/70 border border-white/10">
+                <span className="text-xs text-slate-400 block mb-1">Safety Pass Rate</span>
+                <span className="text-3xl font-black text-emerald-400 font-mono">
+                  {((evalData.metrics.safety_pass_rate || 1.0) * 100).toFixed(0)}%
+                </span>
+              </div>
+              <div className="p-5 rounded-2xl bg-slate-900/70 border border-white/10">
+                <span className="text-xs text-slate-400 block mb-1">متوسط زمن الاستجابة</span>
+                <span className="text-3xl font-black text-blue-400 font-mono">
+                  {evalData.metrics.avg_response_time_sec || 0.12} ث
+                </span>
+              </div>
+              <div className="p-5 rounded-2xl bg-slate-900/70 border border-white/10">
+                <span className="text-xs text-slate-400 block mb-1">Content Hit Rate</span>
+                <span className="text-3xl font-black text-purple-400 font-mono">
+                  {((evalData.metrics.content_hit_rate || 1.0) * 100).toFixed(0)}%
+                </span>
+              </div>
+            </div>
 
-                {/* Historical Chart Cards */}
-                <div className="p-6 rounded-2xl bg-slate-900/70 border border-white/10 space-y-4">
-                  <h4 className="text-sm font-bold text-white">تطور دقة الاسترجاع والأمان عبر أيام العمل</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-                    {evalData.history?.map((h, i) => (
-                      <div key={i} className="p-3 rounded-xl bg-slate-950/60 border border-white/5 text-center">
-                        <span className="text-xs font-semibold text-slate-400 block mb-2">{h.date}</span>
-                        <div className="space-y-1 text-xs font-mono">
-                          <div className="text-cyan-400">P: {(h.precision * 100).toFixed(0)}%</div>
-                          <div className="text-emerald-400">S: {(h.safety * 100).toFixed(0)}%</div>
-                        </div>
-                      </div>
-                    ))}
+            <div className="p-6 rounded-2xl bg-slate-900/70 border border-white/10 space-y-4">
+              <h4 className="text-xs font-bold text-white">تطور دقة الاسترجاع والأمان عبر الأيام</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                {evalData.history?.map((h, i) => (
+                  <div key={i} className="p-3 rounded-xl bg-slate-950/60 border border-white/5 text-center text-xs">
+                    <span className="text-slate-400 block mb-1 font-semibold">{h.date}</span>
+                    <div className="text-cyan-400 font-mono">P: {(h.precision * 100).toFixed(0)}%</div>
+                    <div className="text-emerald-400 font-mono">S: {(h.safety * 100).toFixed(0)}%</div>
                   </div>
-                </div>
-              </>
-            )}
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 5: SAFETY GUARDRAILS */}
+        {/* TAB 6: SAFETY GUARDRAILS */}
         {/* ========================================================================= */}
         {activeTab === 'safety' && (
           <div className="space-y-6">
             <div className="p-6 rounded-2xl bg-slate-900/90 border border-white/10">
-              <h2 className="text-xl font-bold text-white mb-2">معايير الأمان والذكاء الاصطناعي المسؤول (Responsible AI)</h2>
-              <p className="text-sm text-slate-400">
+              <h2 className="text-xl font-bold text-white mb-1">معايير الأمان والذكاء الاصطناعي المسؤول (Responsible AI)</h2>
+              <p className="text-xs text-slate-400">
                 حواجز الحماية الصارمة المدمجة في CardioOS لضمان صفر هلوسة ومنع المخاطر السريرية.
               </p>
             </div>
@@ -691,7 +905,7 @@ export default function DoctorApp() {
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-white/15 rounded-2xl max-w-2xl w-full p-6 space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="font-bold text-lg text-white">الملخص السريري الشامل</h3>
+              <h3 className="font-bold text-base text-white">الملخص السريري الشامل</h3>
               <button onClick={() => setExportModal({ open: false, content: '' })} className="text-slate-400 hover:text-white">✕</button>
             </div>
             <textarea

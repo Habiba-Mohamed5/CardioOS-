@@ -34,7 +34,7 @@ try:
 except Exception as e:
     gemini_client = None
 
-app = FastAPI(title="CardioOS Clinical API", version="2.0.0")
+app = FastAPI(title="CardioOS Full Clinical API", version="3.0.0")
 
 # Enable CORS for React frontend (localhost + Vercel)
 app.add_middleware(
@@ -53,6 +53,8 @@ HIGH_RISK_KEYWORDS = [
     "my grandmother", "my mother", "my father", "my son", "my daughter",
     "جدتي", "أمي", "أبويا", "ابني", "بنتي", "طفلي"
 ]
+
+PROFILE_FILE = config.BASE_DIR / "patient_profile.json"
 
 # Lazy-loaded vectorstore & LLM
 _retriever = None
@@ -88,6 +90,8 @@ class AddReportRequest(BaseModel):
     kind: str = "daily"  # daily, consultation_urgent, consultation_routine
     message: Optional[str] = None
     vitals: Optional[Dict[str, Optional[float]]] = None
+    symptoms: Optional[List[str]] = None
+    is_emergency: Optional[bool] = False
 
 class AddDoctorNoteRequest(BaseModel):
     note_text: str
@@ -99,6 +103,14 @@ class PatientChatRequest(BaseModel):
     image_base64: Optional[str] = None
     mime_type: Optional[str] = "image/jpeg"
 
+class PatientProfileUpdateRequest(BaseModel):
+    conditions: List[str] = []
+    notes: str = ""
+
+class PatientGuidelineRequest(BaseModel):
+    query: str
+    patient_id: Optional[str] = None
+
 
 # ---------------------------------------------------------------------------
 # Health Check
@@ -109,6 +121,36 @@ def health_check():
         "status": "healthy",
         "app": "CardioOS Clinical Engine",
         "timestamp": datetime.now().isoformat()
+    }
+
+
+# ---------------------------------------------------------------------------
+# Doctor: Overview Dashboard Metrics & Live Activity Feed
+# ---------------------------------------------------------------------------
+@app.get("/api/doctor/overview")
+def get_doctor_overview():
+    patients = rs.list_patients()
+    all_reports = []
+    for key, pdata in patients.items():
+        reps = rs.get_patient_reports(key)
+        for r in reps:
+            r_copy = dict(r)
+            r_copy["_patient_key"] = key
+            r_copy["patient_name"] = pdata.get("display_name", key)
+            all_reports.append(r_copy)
+
+    urgent_new = [r for r in all_reports if r.get("kind") == "consultation_urgent" and r.get("status") != "reviewed"]
+    new_reports = [r for r in all_reports if r.get("status") != "reviewed"]
+
+    sorted_reports = sorted(all_reports, key=lambda r: r.get("date", ""), reverse=True)
+
+    return {
+        "total_patients": len(patients),
+        "urgent_count": len(urgent_new),
+        "new_reports_count": len(new_reports),
+        "total_reports_count": len(all_reports),
+        "urgent_cases": urgent_new[:10],
+        "activity_feed": sorted_reports[:20]
     }
 
 
@@ -166,8 +208,6 @@ def doctor_query(req: DoctorQueryRequest):
         })
 
     context_text = "\n\n---\n\n".join(context_chunks)
-
-    # Calculate Confidence Score (calibrated 0.70 - 0.98)
     confidence_score = round(min(0.98, max(0.72, 0.75 + (len(docs) * 0.04))), 2)
 
     system_prompt = """You are CardioOS, a strictly evidence-based clinical decision-support assistant.
@@ -212,6 +252,45 @@ Context: {context}"""
 
 
 # ---------------------------------------------------------------------------
+# Doctor: AI Clinical Summary for a Patient
+# ---------------------------------------------------------------------------
+@app.post("/api/doctor/ai-summary/{patient_id}")
+def generate_patient_ai_summary(patient_id: str):
+    registry = rs.list_patients()
+    key = rs._safe_id(patient_id)
+    name = registry.get(key, {}).get("display_name", patient_id)
+    reports = rs.get_patient_reports(key, newest_first=True)
+    notes = rs.get_doctor_notes(key, newest_first=True)
+    vitals = rs.get_latest_vitals(key)
+
+    data_summary = f"اسم المريض: {name}\nآخر قياسات: {vitals}\n"
+    data_summary += f"التقارير السابقة ({len(reports)} تقرير):\n"
+    for r in reports[:6]:
+        data_summary += f"- [{r.get('date')}] نوع: {r.get('kind')}, ملاحظة: {r.get('message')}, قياسات: {r.get('latest_vitals')}\n"
+    if notes:
+        data_summary += f"ملاحظات الأطباء السابقة:\n"
+        for n in notes[:3]:
+            data_summary += f"- {n.get('doctor_name')}: {n.get('text')}\n"
+
+    prompt = (
+        "أنت استشاري قلب في CardioOS. لخص حالة هذا المريض بدقة سريرية للطبيب المعالج في 4 نقاط سريعة: "
+        "1. الوضع الحالي والقياسات الأخيرة. "
+        "2. مسار التطور والاستقرار/الخطورة. "
+        "3. الأعراض المتكررة أو التنبيهات. "
+        "4. مقترح الإجراء السريري أو التعديل الدوائي القادم.\n\n"
+        f"بيانات المريض:\n{data_summary}"
+    )
+
+    try:
+        _, llm = get_rag()
+        res = llm.invoke(prompt)
+        rs.log_audit(patient_id, "Generated AI Clinical Case Summary", actor="Doctor")
+        return {"summary": res.content}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Summary error: {str(e)}")
+
+
+# ---------------------------------------------------------------------------
 # Patients API
 # ---------------------------------------------------------------------------
 @app.get("/api/patients")
@@ -221,13 +300,23 @@ def get_patients():
     for pid, data in registry.items():
         vitals = rs.get_latest_vitals(pid)
         reports = rs.get_patient_reports(pid, newest_first=True)
+        has_urgent = any(r.get("kind") == "consultation_urgent" and r.get("status") != "reviewed" for r in reports)
+        is_critical = False
+        if vitals:
+            sys_val = vitals.get("systolic") or 0
+            dia_val = vitals.get("diastolic") or 0
+            if sys_val >= 140 or dia_val >= 90:
+                is_critical = True
+
         out.append({
             "id": pid,
             "display_name": data.get("display_name", pid),
             "registered_at": data.get("registered_at"),
             "latest_vitals": vitals,
             "reports_count": len(reports),
-            "has_unreviewed": any(r.get("status") == "new" for r in reports)
+            "has_unreviewed": any(r.get("status") == "new" for r in reports),
+            "has_urgent": has_urgent,
+            "is_critical": is_critical
         })
     return out
 
@@ -243,7 +332,6 @@ def get_patient_profile(patient_id: str):
     registry = rs.list_patients()
     key = rs._safe_id(patient_id)
     if key not in registry:
-        # Auto-register if not yet in registry
         rs.register_patient(patient_id)
         registry = rs.list_patients()
 
@@ -253,13 +341,21 @@ def get_patient_profile(patient_id: str):
     notes = rs.get_doctor_notes(key, newest_first=True)
     audit = rs.get_audit_log(key, newest_first=True)
 
-    # Trends for vitals
     trends = {
         "systolic": rs.get_patient_trend(key, "systolic"),
         "diastolic": rs.get_patient_trend(key, "diastolic"),
         "sugar": rs.get_patient_trend(key, "sugar"),
         "weight": rs.get_patient_trend(key, "weight"),
     }
+
+    # Load patient medical conditions/profile
+    profile_data = {"conditions": [], "notes": ""}
+    if PROFILE_FILE.exists():
+        try:
+            with open(PROFILE_FILE, "r", encoding="utf-8") as f:
+                profile_data = json.load(f)
+        except Exception:
+            pass
 
     return {
         "id": key,
@@ -269,15 +365,31 @@ def get_patient_profile(patient_id: str):
         "reports": reports,
         "notes": notes,
         "audit_log": audit,
-        "trends": trends
+        "trends": trends,
+        "profile": profile_data
     }
+
+
+@app.post("/api/patient/profile/{patient_id}")
+def update_patient_profile(patient_id: str, req: PatientProfileUpdateRequest):
+    data = {
+        "conditions": req.conditions,
+        "notes": req.notes,
+        "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M")
+    }
+    with open(PROFILE_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    rs.log_audit(patient_id, "Updated Medical Profile & Chronic Conditions", actor="Patient")
+    return {"status": "saved", "profile": data}
 
 
 @app.post("/api/patients/{patient_id}/reports")
 def add_patient_report(patient_id: str, req: AddReportRequest):
     report_dict = {
         "message": req.message or "",
-        "latest_vitals": req.vitals or {}
+        "latest_vitals": req.vitals or {},
+        "symptoms": req.symptoms or [],
+        "is_emergency": req.is_emergency or False
     }
     report_id = rs.add_report(patient_id, report_dict, kind=req.kind)
     return {"report_id": report_id, "status": "success"}
@@ -363,10 +475,10 @@ def export_clinical_summary(patient_id: str):
 def get_benchmarking(patient_id: str):
     vitals = rs.get_latest_vitals(patient_id)
     labels = {
-        "systolic": "Systolic Blood Pressure (mmHg)",
-        "diastolic": "Diastolic Blood Pressure (mmHg)",
-        "sugar": "Blood Glucose (mg/dL)",
-        "weight": "Weight (kg)"
+        "systolic": "الضغط الانقباضي (mmHg)",
+        "diastolic": "الضغط الانبساطي (mmHg)",
+        "sugar": "سكر الدم (mg/dL)",
+        "weight": "الوزن (kg)"
     }
     benchmarks = {}
     for field, val in vitals.items():
@@ -420,7 +532,6 @@ def get_evaluation_metrics():
         except Exception:
             pass
 
-    # Historical 7-day trend
     history = [
         {"date": "Day 1", "precision": 0.45, "safety": 0.80},
         {"date": "Day 2", "precision": 0.55, "safety": 0.85},
@@ -539,6 +650,54 @@ def patient_chat(req: PatientChatRequest):
         raise HTTPException(status_code=500, detail=f"Chat error: {str(e)}")
 
 
+# ---------------------------------------------------------------------------
+# Patient: Guideline-Backed Evidence Consultation (Patient-Facing RAG)
+# ---------------------------------------------------------------------------
+@app.post("/api/patient/guideline-consultation")
+def patient_guideline_consultation(req: PatientGuidelineRequest):
+    query = req.query.strip()
+    if not query:
+        raise HTTPException(status_code=400, detail="Query cannot be empty.")
+
+    try:
+        retriever, llm = get_rag()
+        docs = retriever.invoke(query)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Guideline error: {str(e)}")
+
+    if not docs:
+        return {
+            "answer": "عذراً، لم تتوفر إرشادات طبية واضحة ومطابقة لهذا السؤال في الإرشادات المعتمدة الحالية (AHA / WHO). يرجى استشارة طبيبك المعالج.",
+            "citations": []
+        }
+
+    citations = []
+    context_chunks = []
+    for i, doc in enumerate(docs[:3], 1):
+        dname = doc.metadata.get("document_name", "Guideline")
+        page = doc.metadata.get("page_number", "N/A")
+        context_chunks.append(f"[{i}] {dname} (Page {page}): {doc.page_content.strip()}")
+        citations.append({"document": dname, "page": page, "content": doc.page_content.strip()[:200]})
+
+    prompt_text = (
+        "أنت CardioOS، مساعد إرشادات سريري يجيب مريض قلب/ضغط باللغة العربية البسيطة والمطمئنة. "
+        "أجب عن السؤال بناءً على السياق الطبي المرفق فقط مع توثيق المصدر ورقم الصفحة. "
+        "ذكّر المريض بأن هذه معلومات استرشادية عامة ولا تغني عن مناقشة الجرعات مع طبيبه الخاص.\n\n"
+        f"السياق:\n{chr(10).join(context_chunks)}\n\nالسؤال: {query}"
+    )
+
+    try:
+        res = llm.invoke(prompt_text)
+        if req.patient_id:
+            rs.log_audit(req.patient_id, f"Patient Guideline Consultation: {query[:30]}...", actor="Patient")
+        return {
+            "answer": res.content,
+            "citations": citations
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Consultation error: {str(e)}")
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
