@@ -254,48 +254,49 @@ export default function DoctorApp() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 relative">
-        {/* Ambient Subtle Background Pulsing Heart */}
-        <img 
-          src="/hero-bg.gif" 
-          alt="Pulse Ambient" 
-          className="fixed bottom-4 left-4 w-72 h-72 opacity-15 pointer-events-none object-contain mix-blend-screen z-0" 
-        />
-
-        {/* Hero Header Banner with Doctor Avatar */}
-        <div className="relative rounded-3xl overflow-hidden p-6 md:p-8 mb-6 border border-white/10 shadow-2xl bg-gradient-to-r from-slate-900/90 via-blue-950/80 to-slate-900/90 z-10">
-          <div className="absolute inset-0 z-0 opacity-20 mix-blend-overlay">
-            <img src="/cardio_hero.jpg" alt="Clinical Banner" className="w-full h-full object-cover" />
+        {/* Hero Header Banner with Doctor Avatar & Integrated Animated Pulse */}
+        <div className="relative rounded-3xl overflow-hidden p-6 md:p-8 mb-6 border border-white/10 shadow-2xl bg-gradient-to-l from-slate-900 via-blue-950/70 to-slate-900 text-right z-10">
+          {/* Animated Heart GIF cleanly embedded inside the header background */}
+          <div className="absolute inset-0 z-0 opacity-20 mix-blend-screen pointer-events-none overflow-hidden">
+            <img src="/hero-bg.gif" alt="Pulsing Heart" className="w-full h-full object-cover scale-110" />
           </div>
-          <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+
+          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-center gap-5">
-              <div className="relative">
+              <div className="relative shrink-0">
                 <img 
                   src="/doctor_icon.jpg" 
                   alt="Doctor Avatar" 
                   className="w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover ring-2 ring-cyan-500/50 shadow-xl shadow-cyan-500/20" 
                 />
-                <span className="absolute -bottom-1 -left-1 w-4 h-4 rounded-full bg-emerald-500 ring-2 ring-slate-900" title="Online" />
+                <span className="absolute bottom-0 left-0 w-4 h-4 rounded-full bg-emerald-500 ring-2 ring-slate-900" title="Online" />
               </div>
-              <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-bold mb-2">
+              <div className="space-y-1.5">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-bold">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                   مركز قيادة الطبيب السريري (Live Clinical Station)
                 </div>
-                <h1 className="text-2xl md:text-3xl font-black text-white">CardioOS — Doctor Command Center</h1>
-                <p className="text-xs text-slate-300 mt-1">نظام دعم القرار السريري المتقدم المدعوم بأدلة WHO و AHA بالذكاء الاصطناعي</p>
+                <h1 className="text-2xl md:text-3xl font-black text-white">
+                  CardioOS — Doctor Command Center
+                </h1>
+                <p className="text-xs text-slate-300 leading-relaxed max-w-xl">
+                  نظام دعم القرار السريري المتقدم المدعوم بأدلة WHO و AHA بالذكاء الاصطناعي
+                </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="bg-slate-950/80 border border-white/10 px-4 py-2 rounded-xl text-center">
-                <span className="text-[10px] text-slate-400 block">حالة الذكاء الاصطناعي</span>
-                <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 justify-center">
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="bg-slate-950/80 border border-white/10 px-4 py-2.5 rounded-xl text-center min-w-[120px]">
+                <span className="text-[10px] text-slate-400 block mb-0.5">حالة الذكاء الاصطناعي</span>
+                <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 justify-center font-mono">
                   <CheckCircle2 size={12} /> متصل بنجاح
                 </span>
               </div>
-              <div className="bg-slate-950/80 border border-white/10 px-4 py-2 rounded-xl text-center">
-                <span className="text-[10px] text-slate-400 block">المراجع المفهرسة</span>
-                <span className="text-xs font-bold text-cyan-400 font-mono">AHA • WHO • NICE</span>
+              <div className="bg-slate-950/80 border border-white/10 px-4 py-2.5 rounded-xl text-center min-w-[120px]">
+                <span className="text-[10px] text-slate-400 block mb-0.5">المراجع المفهرسة</span>
+                <span className="text-xs font-bold text-cyan-400 font-mono">
+                  AHA • WHO • NICE
+                </span>
               </div>
             </div>
           </div>

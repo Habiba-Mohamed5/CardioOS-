@@ -350,47 +350,46 @@ export default function PatientApp() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-5xl w-full mx-auto p-6 relative">
-        {/* Ambient Pulsing Heart GIF Animation */}
-        <img 
-          src="/hero-bg.gif" 
-          alt="Pulse Ambient" 
-          className="fixed bottom-4 right-4 w-72 h-72 opacity-15 pointer-events-none object-contain mix-blend-screen z-0" 
-        />
-
-        {/* Hero Header Banner with Patient Avatar */}
-        <div className="relative rounded-3xl overflow-hidden p-6 md:p-8 mb-6 border border-white/10 shadow-2xl bg-gradient-to-r from-slate-900/90 via-rose-950/80 to-slate-900/90 z-10">
-          <div className="absolute inset-0 z-0 opacity-20 mix-blend-overlay">
-            <img src="/patient_bg.jpg" alt="Patient Banner" className="w-full h-full object-cover" />
+        {/* Hero Header Banner with Patient Avatar & Integrated Animated Pulse */}
+        <div className="relative rounded-3xl overflow-hidden p-6 md:p-8 mb-6 border border-white/10 shadow-2xl bg-gradient-to-l from-slate-900 via-rose-950/70 to-slate-900 text-right z-10">
+          {/* Animated Heart GIF cleanly embedded inside the header background */}
+          <div className="absolute inset-0 z-0 opacity-20 mix-blend-screen pointer-events-none overflow-hidden">
+            <img src="/hero-bg.gif" alt="Pulsing Heart" className="w-full h-full object-cover scale-110" />
           </div>
-          <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+
+          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-center gap-5">
-              <div className="relative">
+              <div className="relative shrink-0">
                 <img 
                   src="/patient_icon.jpg" 
                   alt="Patient Avatar" 
                   className="w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover ring-2 ring-rose-500/50 shadow-xl shadow-rose-500/20" 
                 />
-                <span className="absolute -bottom-1 -left-1 w-4 h-4 rounded-full bg-emerald-500 ring-2 ring-slate-900" title="Active" />
+                <span className="absolute bottom-0 left-0 w-4 h-4 rounded-full bg-emerald-500 ring-2 ring-slate-900" title="Active" />
               </div>
-              <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-bold mb-2">
+              <div className="space-y-1.5">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-bold">
                   <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping" />
-                  بوابة رعاية ومتابعة المريض الذكية (Live Heart Health)
+                  بوابة رعاية ومتابعة المريض الذكية
                 </div>
-                <h1 className="text-2xl md:text-3xl font-black text-white">مرحباً بك، {patientData?.display_name || patientId} 👋</h1>
-                <p className="text-xs text-slate-300 mt-1">متابعة يومية لصحة قلبك، تسجيل القياسات، وتحليل الوجبات بالذكاء الاصطناعي</p>
+                <h1 className="text-2xl md:text-3xl font-black text-white">
+                  مرحباً بك، {patientData?.display_name || patientId} 👋
+                </h1>
+                <p className="text-xs text-slate-300 leading-relaxed max-w-xl">
+                  متابعة يومية دقيقة لصحة قلبك، تسجيل القياسات، وتحليل الوجبات بالذكاء الاصطناعي
+                </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="bg-slate-950/80 border border-white/10 px-4 py-2 rounded-xl text-center">
-                <span className="text-[10px] text-slate-400 block">آخر قياس مسجل</span>
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="bg-slate-950/80 border border-white/10 px-4 py-2.5 rounded-xl text-center min-w-[120px]">
+                <span className="text-[10px] text-slate-400 block mb-0.5">آخر قياس مسجل</span>
                 <span className="text-xs font-bold text-rose-400 font-mono">
                   {patientData?.latest_vitals?.systolic ? `${patientData.latest_vitals.systolic}/${patientData.latest_vitals.diastolic} mmHg` : 'لا توجد قراءات'}
                 </span>
               </div>
-              <div className="bg-slate-950/80 border border-white/10 px-4 py-2 rounded-xl text-center">
-                <span className="text-[10px] text-slate-400 block">التقارير المستلمة</span>
+              <div className="bg-slate-950/80 border border-white/10 px-4 py-2.5 rounded-xl text-center min-w-[100px]">
+                <span className="text-[10px] text-slate-400 block mb-0.5">التقارير المسجلة</span>
                 <span className="text-xs font-bold text-emerald-400 font-mono">
                   {patientData?.reports?.length || 0} تقرير
                 </span>
