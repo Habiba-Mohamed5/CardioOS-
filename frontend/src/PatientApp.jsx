@@ -3,14 +3,25 @@ import {
   Heart, Activity, Camera, MessageSquare, FileText, 
   Send, Upload, CheckCircle2, AlertCircle, Clock, 
   ChevronLeft, Sparkles, RefreshCw, User, ShieldAlert,
-  BarChart2, BookOpen, AlertOctagon, Download, CheckSquare, ChevronDown
+  BarChart2, BookOpen, AlertOctagon, Download, CheckSquare, ChevronDown,
+  PhoneCall, Calculator, Printer, Mic
 } from 'lucide-react';
 import { apiRequest, API_BASE_URL } from './apiConfig';
 import LiveEcgWidget from './LiveEcgWidget';
 import PatientVitalityWidget from './PatientVitalityWidget';
+import VoiceInputButton from './VoiceInputButton';
+import EmergencySosModal from './EmergencySosModal';
+import AscvdCalculatorModal from './AscvdCalculatorModal';
+import PrintableReportModal from './PrintableReportModal';
+import ThemeToggle from './ThemeToggle';
 
 export default function PatientApp() {
   const [activeTab, setActiveTab] = useState('profile'); // profile | journal | alerts | report | consult | chat | guidelines | bench
+  
+  // Interactive Modals State
+  const [isSosOpen, setIsSosOpen] = useState(false);
+  const [isAscvdOpen, setIsAscvdOpen] = useState(false);
+  const [isPrintableOpen, setIsPrintableOpen] = useState(false);
   
   // Patient Profile & Login
   const [patientId, setPatientId] = useState('حبيبة_محمد');
@@ -334,13 +345,38 @@ export default function PatientApp() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* ASCVD Risk Tool */}
+          <button
+            type="button"
+            onClick={() => setIsAscvdOpen(true)}
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-semibold transition"
+            title="حاسبة مخاطر القلب ASCVD"
+          >
+            <Calculator size={13} />
+            <span>حاسبة المخاطر</span>
+          </button>
+
+          {/* Printable Report Tool */}
+          <button
+            type="button"
+            onClick={() => setIsPrintableOpen(true)}
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold border border-white/10 transition"
+            title="طباعة التقرير الطبي"
+          >
+            <Printer size={13} />
+            <span>تقرير مطبوع</span>
+          </button>
+
+          {/* Theme Toggle */}
+          <ThemeToggle />
+
           <div className="flex items-center gap-1.5 bg-slate-950/60 border border-white/10 px-3 py-1.5 rounded-xl text-xs">
             <User size={13} className="text-rose-400" />
             <input
               type="text"
               value={patientId}
               onChange={(e) => setPatientId(e.target.value)}
-              className="bg-transparent border-0 text-xs font-semibold text-white w-24 focus:outline-none"
+              className="bg-transparent border-0 text-xs font-semibold text-white w-20 focus:outline-none"
               title="اسم المريض"
             />
           </div>
@@ -617,12 +653,15 @@ export default function PatientApp() {
 
                 {/* Notes */}
                 <div>
-                  <label className="text-xs font-bold text-slate-300 block mb-1">4. ملاحظات أو تفاصيل إضافية:</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-slate-300">4. ملاحظات أو تفاصيل إضافية:</label>
+                    <VoiceInputButton onTranscript={(txt) => setJournalMessage(prev => prev ? prev + ' ' + txt : txt)} />
+                  </div>
                   <textarea
                     rows={2}
                     value={journalMessage}
                     onChange={(e) => setJournalMessage(e.target.value)}
-                    placeholder="اكتب أي ملاحظة عن شعورك اليوم أو وجباتك..."
+                    placeholder="اكتب أي ملاحظة عن شعورك اليوم أو وجباتك (أو استخدم المايك للإملاء الصوتي)..."
                     className="w-full bg-slate-950 border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none"
                   />
                 </div>
@@ -831,8 +870,13 @@ export default function PatientApp() {
                       ? 'bg-rose-600 text-white rounded-br-none shadow-md shadow-rose-600/20'
                       : 'bg-slate-950/90 text-slate-200 border border-white/10 rounded-bl-none shadow-md'
                   }`}>
-                    <div className="font-bold text-[10px] text-slate-400 mb-1">
-                      {m.role === 'user' ? (patientData?.display_name || patientId) : 'CardioOS Companion (AI)'}
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="font-bold text-[10px] text-slate-400">
+                        {m.role === 'user' ? (patientData?.display_name || patientId) : 'CardioOS Companion (AI)'}
+                      </span>
+                      {m.role === 'assistant' && (
+                        <VoiceInputButton textToSpeak={m.content} />
+                      )}
                     </div>
                     <div className="whitespace-pre-wrap">{m.content}</div>
                   </div>
@@ -849,14 +893,15 @@ export default function PatientApp() {
               <div ref={chatBottomRef} />
             </div>
 
-            <form onSubmit={handleSendChat} className="p-4 bg-slate-950/80 border-t border-white/10 flex gap-2">
+            <form onSubmit={handleSendChat} className="p-4 bg-slate-950/80 border-t border-white/10 flex items-center gap-2">
               <input
                 type="text"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                placeholder="اكتب سؤالك الصحي هنا..."
+                placeholder="اكتب سؤالك الصحي هنا أو املأه بالصوت..."
                 className="flex-1 bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
               />
+              <VoiceInputButton onTranscript={(txt) => setChatInput(prev => prev ? prev + ' ' + txt : txt)} />
               <button
                 type="submit"
                 disabled={isChatSending || !chatInput.trim()}
@@ -879,7 +924,7 @@ export default function PatientApp() {
               <p className="text-xs text-slate-400">محرك بحث مخصص للمريض يستخرج المعلومات المعتمدة من أحدث الأدلة السريرية العالمية دون تخمين أو هلوسة.</p>
             </div>
 
-            <form onSubmit={handleSearchGuidelines} className="flex gap-2">
+            <form onSubmit={handleSearchGuidelines} className="flex items-center gap-2">
               <input
                 type="text"
                 value={guidelineQuery}
@@ -887,6 +932,7 @@ export default function PatientApp() {
                 placeholder="مثال: ما هو ضغط الدم المستهدف لمرضى القلب؟"
                 className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
               />
+              <VoiceInputButton onTranscript={(txt) => setGuidelineQuery(prev => prev ? prev + ' ' + txt : txt)} />
               <button
                 type="submit"
                 disabled={isSearchingGuidelines || !guidelineQuery.trim()}
@@ -960,6 +1006,35 @@ export default function PatientApp() {
         )}
 
       </main>
+
+      {/* Floating Emergency SOS Button */}
+      <button
+        type="button"
+        onClick={() => setIsSosOpen(true)}
+        className="fixed bottom-6 left-6 z-40 px-5 py-3.5 rounded-full bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white font-black shadow-2xl shadow-rose-600/50 hover:scale-105 active:scale-95 transition-all flex items-center gap-2.5 border-2 border-white/20 animate-bounce"
+        title="طوارئ القلب السريعة SOS"
+      >
+        <PhoneCall size={18} className="animate-spin" style={{ animationDuration: '3s' }} />
+        <span className="text-xs font-black tracking-wider">طوارئ SOS (123)</span>
+      </button>
+
+      {/* Interactive Modals */}
+      <EmergencySosModal
+        isOpen={isSosOpen}
+        onClose={() => setIsSosOpen(false)}
+        onAlertDoctor={() => {
+          apiRequest(`/api/patients/${patientId}/reports`, {
+            method: 'POST',
+            body: JSON.stringify({ kind: 'consultation_urgent', message: '⚠️ تنبيه طوارئ: المريض ضغط على زر الاستغاثة العاجل!', is_emergency: true })
+          });
+        }}
+      />
+      <AscvdCalculatorModal isOpen={isAscvdOpen} onClose={() => setIsAscvdOpen(false)} />
+      <PrintableReportModal 
+        isOpen={isPrintableOpen} 
+        onClose={() => setIsPrintableOpen(false)} 
+        patientData={patientData || { id: patientId, display_name: patientId, latest_vitals: vitals }} 
+      />
     </div>
   );
 }

@@ -3,13 +3,24 @@ import {
   Activity, Search, Users, BarChart3, ShieldCheck, FileText, 
   Send, Download, Trash2, CheckCircle2, AlertTriangle, Clock, 
   ChevronRight, Sparkles, UserPlus, RefreshCw, Eye, AlertOctagon, 
-  TrendingUp, Filter, ArrowUpDown, ChevronDown, CheckSquare, ShieldAlert
+  TrendingUp, Filter, ArrowUpDown, ChevronDown, CheckSquare, ShieldAlert,
+  Calculator, Pill, Printer, Mic
 } from 'lucide-react';
 import { API_BASE_URL, apiRequest } from './apiConfig';
 import LiveEcgWidget from './LiveEcgWidget';
+import AscvdCalculatorModal from './AscvdCalculatorModal';
+import DrugInteractionModal from './DrugInteractionModal';
+import PrintableReportModal from './PrintableReportModal';
+import VoiceInputButton from './VoiceInputButton';
+import ThemeToggle from './ThemeToggle';
 
 export default function DoctorApp() {
   const [activeTab, setActiveTab] = useState('overview'); // overview | copilot | reports | bench | eval | safety
+
+  // Interactive Modals State
+  const [isAscvdOpen, setIsAscvdOpen] = useState(false);
+  const [isDrugOpen, setIsDrugOpen] = useState(false);
+  const [isPrintableOpen, setIsPrintableOpen] = useState(false);
 
   // Overview Data
   const [overviewData, setOverviewData] = useState(null);
@@ -246,7 +257,36 @@ export default function DoctorApp() {
           })}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsAscvdOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-semibold transition"
+            title="حاسبة مخاطر القلب 10 سنوات (ASCVD)"
+          >
+            <Calculator size={13} />
+            <span className="hidden sm:inline">حاسبة ASCVD</span>
+          </button>
+
+          <button
+            onClick={() => setIsDrugOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold transition"
+            title="فاحص التفاعلات الدوائية للقلب"
+          >
+            <Pill size={13} />
+            <span className="hidden sm:inline">فاحص الأدوية</span>
+          </button>
+
+          <button
+            onClick={() => setIsPrintableOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 text-xs font-semibold transition"
+            title="تجهيز وطباعة تقرير سريري PDF"
+          >
+            <Printer size={13} />
+            <span className="hidden sm:inline">تقرير PDF</span>
+          </button>
+
+          <ThemeToggle />
+
           <a href="/" className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">
             الرئيسية
           </a>
@@ -454,14 +494,15 @@ export default function DoctorApp() {
               </div>
 
               {/* Search Form */}
-              <form onSubmit={handleSearch} className="mt-5 flex gap-3">
+              <form onSubmit={handleSearch} className="mt-5 flex items-center gap-2">
                 <input
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="اكتب استفسارك الطبي السريري هنا..."
+                  placeholder="اكتب استفسارك الطبي السريري هنا أو املأه بالصوت..."
                   className="flex-1 bg-slate-950/80 border border-white/15 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
                 />
+                <VoiceInputButton onTranscript={(txt) => setQuery(prev => prev ? prev + ' ' + txt : txt)} />
                 <button
                   type="submit"
                   disabled={isSearching || !query.trim()}
@@ -637,7 +678,7 @@ export default function DoctorApp() {
                       <p className="text-xs text-slate-400">معرف المريض: {selectedPatient.id}</p>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <button
                         onClick={handleGenerateAiSummary}
                         disabled={isGeneratingAiSummary}
@@ -647,11 +688,18 @@ export default function DoctorApp() {
                         <span>تلخيص ذكي للحالة</span>
                       </button>
                       <button
+                        onClick={() => setIsPrintableOpen(true)}
+                        className="px-3 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold transition flex items-center gap-1.5"
+                      >
+                        <Printer size={12} />
+                        <span>طباعة تقرير سريري (PDF)</span>
+                      </button>
+                      <button
                         onClick={handleExportSummary}
                         className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition flex items-center gap-1.5"
                       >
                         <Download size={12} />
-                        <span>تصدير تقرير شامل</span>
+                        <span>تصدير (.txt)</span>
                       </button>
                     </div>
                   </div>
@@ -761,18 +809,19 @@ export default function DoctorApp() {
                   {/* Sub-tab 3: Doctor Notes */}
                   {patientSubTab === 'notes' && (
                     <div className="space-y-3">
-                      <div className="flex gap-2">
+                      <div className="flex items-center gap-2">
                         <input
                           type="text"
                           value={newNote}
                           onChange={(e) => setNewNote(e.target.value)}
-                          placeholder="اكتب ملاحظة أو توجيه دوائي هنا..."
+                          placeholder="اكتب ملاحظة أو توجيه دوائي هنا أو املأه بالصوت..."
                           className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
                         />
+                        <VoiceInputButton onTranscript={(txt) => setNewNote(prev => prev ? prev + ' ' + txt : txt)} />
                         <button
                           onClick={handleAddNote}
                           disabled={isSubmittingNote || !newNote.trim()}
-                          className="px-4 py-2 bg-cyan-500 text-slate-950 font-bold rounded-xl text-xs disabled:opacity-50"
+                          className="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl text-xs disabled:opacity-50 transition"
                         >
                           إضافة
                         </button>
@@ -990,6 +1039,15 @@ export default function DoctorApp() {
           </div>
         </div>
       )}
+
+      {/* Interactive Clinical Modals */}
+      <AscvdCalculatorModal isOpen={isAscvdOpen} onClose={() => setIsAscvdOpen(false)} />
+      <DrugInteractionModal isOpen={isDrugOpen} onClose={() => setIsDrugOpen(false)} />
+      <PrintableReportModal
+        isOpen={isPrintableOpen}
+        onClose={() => setIsPrintableOpen(false)}
+        patientData={selectedPatient || { id: 'تقرير سريري عام', display_name: 'تقرير سريري عام', latest_vitals: {} }}
+      />
     </div>
   );
 }

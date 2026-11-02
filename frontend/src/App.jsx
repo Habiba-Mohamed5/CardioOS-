@@ -4,6 +4,7 @@ import { Activity, Shield, BookOpen, Brain, User, UserCheck, BarChart } from 'lu
 import DoctorApp from './DoctorApp';
 import PatientApp from './PatientApp';
 import RagEvaluation from './RagEvaluation';
+import ThemeToggle from './ThemeToggle';
 
 function LandingPage() {
   return (
@@ -27,9 +28,10 @@ function LandingPage() {
             <img src="/cardioos_named_logo.jpg" alt="CardioOS" className="w-10 h-10 rounded-xl object-cover ring-1 ring-cyan-500/50 shadow-lg shadow-cyan-500/20" />
             <span>Cardio<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">OS</span></span>
           </div>
-          <div className="hidden md:flex gap-8 text-sm font-semibold text-slate-300">
+          <div className="flex items-center gap-6 text-sm font-semibold text-slate-300">
             <a href="#features" className="hover:text-white transition">المميزات السريرية</a>
             <a href="#portals" className="hover:text-white transition">بوابات الوصول</a>
+            <ThemeToggle />
           </div>
         </div>
       </nav>
