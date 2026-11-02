@@ -1,0 +1,24 @@
+[
+  {
+    "message": "",
+    "latest_vitals": {},
+    "symptoms": [
+      "ألم أو ثقل في الصدر"
+    ],
+    "is_emergency": true,
+    "id": "حبيبة_محمد-1-20261102223727",
+    "date": "2026-11-02 22:37",
+    "kind": "daily",
+    "status": "new"
+  },
+  {
+    "message": "بسرعه",
+    "latest_vitals": {},
+    "symptoms": [],
+    "is_emergency": false,
+    "id": "حبيبة_محمد-2-20261102223751",
+    "date": "2026-11-02 22:37",
+    "kind": "consultation_urgent",
+    "status": "new"
+  }
+]

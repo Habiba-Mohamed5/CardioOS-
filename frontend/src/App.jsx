@@ -91,22 +91,25 @@ function LandingPage() {
           <PortalCard 
             to="/doctor" 
             title="بوابة الأطباء" 
-            desc="لوحة تحكم سريرية شاملة، إدارة المرضى، والتنبيهات." 
-            icon={<UserCheck size={48} />} 
+            desc="لوحة تحكم سريرية شاملة، إدارة المرضى، والتنبيهات ومحرك بحث RAG بالأدلة." 
+            image="/doctor_icon.jpg"
+            bgImage="/cardio_hero.jpg"
             color="blue" 
           />
           <PortalCard 
             to="/patient" 
             title="بوابة المرضى" 
-            desc="تسجيل المؤشرات اليومية والتواصل مع المستشار." 
-            icon={<User size={48} />} 
+            desc="تسجيل المؤشرات اليومية، تحليل الوجبات بالذكاء الاصطناعي، والتواصل المباشر مع الطبيب." 
+            image="/patient_icon.jpg"
+            bgImage="/patient_bg.jpg"
             color="rose" 
           />
           <PortalCard 
             to="/evaluation" 
             title="تقييم RAG" 
-            desc="عرض الأداء والدقة التحليلية لنظام الذكاء الاصطناعي." 
-            icon={<BarChart size={48} />} 
+            desc="عرض الأداء والدقة التحليلية لنظام الذكاء الاصطناعي ومقارنة استراتيجيات الـ Chunks." 
+            image="/speed_icon.jpg"
+            bgImage="/app_bg.jpg"
             color="purple" 
           />
         </div>
@@ -139,7 +142,7 @@ function FeatureCard({ icon, title, desc, delay }) {
   );
 }
 
-function PortalCard({ to, title, desc, icon, color }) {
+function PortalCard({ to, title, desc, image, bgImage, color }) {
   const gradients = {
     blue: "from-blue-500/10 hover:from-blue-500/20 border-blue-500/20 hover:border-blue-500/40 text-blue-400",
     rose: "from-rose-500/10 hover:from-rose-500/20 border-rose-500/20 hover:border-rose-500/40 text-rose-400",
@@ -147,21 +150,31 @@ function PortalCard({ to, title, desc, icon, color }) {
   };
 
   return (
-    <Link to={to} className="block">
+    <Link to={to} className="block group">
       <motion.div 
         whileHover={{ y: -8, scale: 1.02 }}
-        className={`h-full bg-gradient-to-b to-slate-900/80 border p-8 rounded-[2rem] relative overflow-hidden backdrop-blur-xl transition-all ${gradients[color]}`}
+        className={`h-full bg-gradient-to-b to-slate-900/90 border p-8 rounded-[2rem] relative overflow-hidden backdrop-blur-xl transition-all ${gradients[color]}`}
       >
-        <div className="absolute -right-4 -top-4 opacity-10 scale-150 rotate-12">
-          {icon}
-        </div>
-        <div className="mb-6">{icon}</div>
-        <h3 className="text-3xl font-black mb-4 text-white">{title}</h3>
-        <p className="text-slate-300 text-sm leading-relaxed mb-8">
-          {desc}
-        </p>
-        <div className="inline-flex items-center gap-2 font-bold bg-white/10 px-4 py-2 rounded-full">
-          دخول <span>←</span>
+        {bgImage && (
+          <div className="absolute inset-0 opacity-15 mix-blend-overlay group-hover:opacity-25 transition-all">
+            <img src={bgImage} alt="Portal BG" className="w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-500" />
+          </div>
+        )}
+        <div className="relative z-10">
+          {image && (
+            <img 
+              src={image} 
+              alt={title} 
+              className="w-16 h-16 rounded-2xl object-cover ring-2 ring-white/20 mb-6 shadow-xl shadow-black/40 group-hover:scale-105 transition-transform" 
+            />
+          )}
+          <h3 className="text-3xl font-black mb-3 text-white">{title}</h3>
+          <p className="text-slate-300 text-sm leading-relaxed mb-8">
+            {desc}
+          </p>
+          <div className="inline-flex items-center gap-2 font-bold bg-white/10 hover:bg-white/20 px-5 py-2.5 rounded-full text-white transition-all text-xs">
+            دخول البوابة <span className="text-sm">←</span>
+          </div>
         </div>
       </motion.div>
     </Link>

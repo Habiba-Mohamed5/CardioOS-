@@ -1,0 +1,17 @@
+[
+  {
+    "date": "2026-11-02 22:37:12",
+    "actor": "Patient",
+    "action": "Updated Medical Profile & Chronic Conditions"
+  },
+  {
+    "date": "2026-11-02 22:37:27",
+    "actor": "Patient",
+    "action": "تقرير جديد أُرسل (daily)"
+  },
+  {
+    "date": "2026-11-02 22:37:51",
+    "actor": "Patient",
+    "action": "تقرير جديد أُرسل (consultation_urgent)"
+  }
+]

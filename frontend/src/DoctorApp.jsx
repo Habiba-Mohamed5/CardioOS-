@@ -253,7 +253,53 @@ export default function DoctorApp() {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-6 relative">
+        {/* Ambient Subtle Background Pulsing Heart */}
+        <img 
+          src="/hero-bg.gif" 
+          alt="Pulse Ambient" 
+          className="fixed bottom-4 left-4 w-72 h-72 opacity-15 pointer-events-none object-contain mix-blend-screen z-0" 
+        />
+
+        {/* Hero Header Banner with Doctor Avatar */}
+        <div className="relative rounded-3xl overflow-hidden p-6 md:p-8 mb-6 border border-white/10 shadow-2xl bg-gradient-to-r from-slate-900/90 via-blue-950/80 to-slate-900/90 z-10">
+          <div className="absolute inset-0 z-0 opacity-20 mix-blend-overlay">
+            <img src="/cardio_hero.jpg" alt="Clinical Banner" className="w-full h-full object-cover" />
+          </div>
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+            <div className="flex items-center gap-5">
+              <div className="relative">
+                <img 
+                  src="/doctor_icon.jpg" 
+                  alt="Doctor Avatar" 
+                  className="w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover ring-2 ring-cyan-500/50 shadow-xl shadow-cyan-500/20" 
+                />
+                <span className="absolute -bottom-1 -left-1 w-4 h-4 rounded-full bg-emerald-500 ring-2 ring-slate-900" title="Online" />
+              </div>
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-bold mb-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  مركز قيادة الطبيب السريري (Live Clinical Station)
+                </div>
+                <h1 className="text-2xl md:text-3xl font-black text-white">CardioOS — Doctor Command Center</h1>
+                <p className="text-xs text-slate-300 mt-1">نظام دعم القرار السريري المتقدم المدعوم بأدلة WHO و AHA بالذكاء الاصطناعي</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="bg-slate-950/80 border border-white/10 px-4 py-2 rounded-xl text-center">
+                <span className="text-[10px] text-slate-400 block">حالة الذكاء الاصطناعي</span>
+                <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 justify-center">
+                  <CheckCircle2 size={12} /> متصل بنجاح
+                </span>
+              </div>
+              <div className="bg-slate-950/80 border border-white/10 px-4 py-2 rounded-xl text-center">
+                <span className="text-[10px] text-slate-400 block">المراجع المفهرسة</span>
+                <span className="text-xs font-bold text-cyan-400 font-mono">AHA • WHO • NICE</span>
+              </div>
+            </div>
+          </div>
+        </div>
         
         {/* ========================================================================= */}
         {/* TAB 1: OVERVIEW DASHBOARD */}
@@ -549,16 +595,19 @@ export default function DoctorApp() {
                         : 'bg-slate-900/60 border-white/5 hover:border-white/15'
                     }`}
                   >
-                    <div>
-                      <h4 className="font-bold text-xs text-white">{p.display_name}</h4>
-                      <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
-                        {p.latest_vitals?.systolic ? (
-                          <span>ضغط: {p.latest_vitals.systolic}/{p.latest_vitals.diastolic}</span>
-                        ) : (
-                          <span>لا توجد قياسات</span>
-                        )}
-                        {p.has_urgent && <span className="px-1 rounded bg-rose-500/20 text-rose-300 text-[10px]">طارئ</span>}
-                        {p.has_unreviewed && !p.has_urgent && <span className="px-1 rounded bg-amber-500/20 text-amber-300 text-[10px]">جديد</span>}
+                    <div className="flex items-center gap-3">
+                      <img src="/patient_icon.jpg" alt="Patient Avatar" className="w-9 h-9 rounded-xl object-cover ring-1 ring-white/10" />
+                      <div>
+                        <h4 className="font-bold text-xs text-white">{p.display_name}</h4>
+                        <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
+                          {p.latest_vitals?.systolic ? (
+                            <span>ضغط: {p.latest_vitals.systolic}/{p.latest_vitals.diastolic}</span>
+                          ) : (
+                            <span>لا توجد قياسات</span>
+                          )}
+                          {p.has_urgent && <span className="px-1 rounded bg-rose-500/20 text-rose-300 text-[10px]">طارئ</span>}
+                          {p.has_unreviewed && !p.has_urgent && <span className="px-1 rounded bg-amber-500/20 text-amber-300 text-[10px]">جديد</span>}
+                        </div>
                       </div>
                     </div>
                     <ChevronRight size={14} className={selectedPatientId === p.id ? 'text-cyan-400' : 'text-slate-600'} />

@@ -349,7 +349,55 @@ export default function PatientApp() {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-5xl w-full mx-auto p-6">
+      <main className="flex-1 max-w-5xl w-full mx-auto p-6 relative">
+        {/* Ambient Pulsing Heart GIF Animation */}
+        <img 
+          src="/hero-bg.gif" 
+          alt="Pulse Ambient" 
+          className="fixed bottom-4 right-4 w-72 h-72 opacity-15 pointer-events-none object-contain mix-blend-screen z-0" 
+        />
+
+        {/* Hero Header Banner with Patient Avatar */}
+        <div className="relative rounded-3xl overflow-hidden p-6 md:p-8 mb-6 border border-white/10 shadow-2xl bg-gradient-to-r from-slate-900/90 via-rose-950/80 to-slate-900/90 z-10">
+          <div className="absolute inset-0 z-0 opacity-20 mix-blend-overlay">
+            <img src="/patient_bg.jpg" alt="Patient Banner" className="w-full h-full object-cover" />
+          </div>
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-6">
+            <div className="flex items-center gap-5">
+              <div className="relative">
+                <img 
+                  src="/patient_icon.jpg" 
+                  alt="Patient Avatar" 
+                  className="w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover ring-2 ring-rose-500/50 shadow-xl shadow-rose-500/20" 
+                />
+                <span className="absolute -bottom-1 -left-1 w-4 h-4 rounded-full bg-emerald-500 ring-2 ring-slate-900" title="Active" />
+              </div>
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs font-bold mb-2">
+                  <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping" />
+                  بوابة رعاية ومتابعة المريض الذكية (Live Heart Health)
+                </div>
+                <h1 className="text-2xl md:text-3xl font-black text-white">مرحباً بك، {patientData?.display_name || patientId} 👋</h1>
+                <p className="text-xs text-slate-300 mt-1">متابعة يومية لصحة قلبك، تسجيل القياسات، وتحليل الوجبات بالذكاء الاصطناعي</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="bg-slate-950/80 border border-white/10 px-4 py-2 rounded-xl text-center">
+                <span className="text-[10px] text-slate-400 block">آخر قياس مسجل</span>
+                <span className="text-xs font-bold text-rose-400 font-mono">
+                  {patientData?.latest_vitals?.systolic ? `${patientData.latest_vitals.systolic}/${patientData.latest_vitals.diastolic} mmHg` : 'لا توجد قراءات'}
+                </span>
+              </div>
+              <div className="bg-slate-950/80 border border-white/10 px-4 py-2 rounded-xl text-center">
+                <span className="text-[10px] text-slate-400 block">التقارير المستلمة</span>
+                <span className="text-xs font-bold text-emerald-400 font-mono">
+                  {patientData?.reports?.length || 0} تقرير
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* ========================================================================= */}
         {/* TAB 1: MEDICAL PROFILE */}
@@ -767,14 +815,19 @@ export default function PatientApp() {
           <div className="h-[620px] flex flex-col rounded-2xl bg-slate-900/80 border border-white/10 overflow-hidden shadow-xl">
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {chatMessages.map((m, i) => (
-                <div key={i} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                <div key={i} className={`flex items-start gap-2.5 ${m.role === 'user' ? 'justify-start flex-row' : 'justify-end flex-row-reverse'}`}>
+                  <img 
+                    src={m.role === 'user' ? '/patient_icon.jpg' : '/doctor_icon.jpg'} 
+                    alt="Avatar" 
+                    className="w-7 h-7 rounded-lg object-cover ring-1 ring-white/10 shrink-0 mt-1" 
+                  />
                   <div className={`max-w-[80%] p-3.5 rounded-2xl text-xs leading-relaxed ${
                     m.role === 'user'
-                      ? 'bg-rose-600 text-white rounded-br-none'
-                      : 'bg-slate-950/90 text-slate-200 border border-white/10 rounded-bl-none'
+                      ? 'bg-rose-600 text-white rounded-br-none shadow-md shadow-rose-600/20'
+                      : 'bg-slate-950/90 text-slate-200 border border-white/10 rounded-bl-none shadow-md'
                   }`}>
                     <div className="font-bold text-[10px] text-slate-400 mb-1">
-                      {m.role === 'user' ? 'أنت' : 'CardioOS Companion'}
+                      {m.role === 'user' ? (patientData?.display_name || patientId) : 'CardioOS Companion (AI)'}
                     </div>
                     <div className="whitespace-pre-wrap">{m.content}</div>
                   </div>

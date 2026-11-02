@@ -1,7 +1,9 @@
 {
-    "conditions": [
-        "Heart Disease (أمراض القلب)",
-        "Diabetes (مرض السكري)"
-    ],
-    "notes": "اسبرين\nفايتمن\n"
+  "conditions": [
+    "Heart Disease (أمراض القلب)",
+    "Diabetes (مرض السكري)",
+    "ارتفاع ضغط الدم (Hypertension)"
+  ],
+  "notes": "اسبرين\nفايتمن\n",
+  "updated_at": "2026-11-02 22:37"
 }
