@@ -1,6 +1,7 @@
 {
     "conditions": [
-        "Heart Disease (أمراض القلب)"
+        "Heart Disease (أمراض القلب)",
+        "Diabetes (مرض السكري)"
     ],
     "notes": "اسبرين\nفايتمن\n"
 }

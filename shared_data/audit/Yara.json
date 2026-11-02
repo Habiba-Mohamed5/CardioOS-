@@ -1,0 +1,12 @@
+[
+  {
+    "date": "2026-08-21 17:16:10",
+    "actor": "Patient",
+    "action": "تقرير جديد أُرسل (consultation_routine)"
+  },
+  {
+    "date": "2026-08-21 17:25:30",
+    "actor": "Patient",
+    "action": "تقرير جديد أُرسل (consultation_urgent)"
+  }
+]

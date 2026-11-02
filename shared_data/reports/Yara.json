@@ -1,0 +1,50 @@
+[
+  {
+    "message": "",
+    "latest_vitals": {
+      "date": "2026-08-21 17:15",
+      "systolic": 120,
+      "diastolic": 80,
+      "sugar": 110,
+      "weight": 75.0,
+      "symptoms": [
+        "ضيق حاد في التنفس"
+      ],
+      "notes": "",
+      "ai_analysis": "",
+      "is_emergency": true
+    },
+    "id": "Yara-1-20260821171610",
+    "date": "2026-08-21 17:16",
+    "kind": "consultation_routine",
+    "status": "new",
+    "systolic": 120,
+    "diastolic": 80,
+    "sugar": 110,
+    "weight": 75.0
+  },
+  {
+    "message": "ضروري\n",
+    "latest_vitals": {
+      "date": "2026-08-21 17:24",
+      "systolic": 120,
+      "diastolic": 80,
+      "sugar": 110,
+      "weight": 75.0,
+      "symptoms": [
+        "ضيق حاد في التنفس"
+      ],
+      "notes": "",
+      "ai_analysis": "",
+      "is_emergency": true
+    },
+    "id": "yara-2-20260821172530",
+    "date": "2026-08-21 17:25",
+    "kind": "consultation_urgent",
+    "status": "new",
+    "systolic": 120,
+    "diastolic": 80,
+    "sugar": 110,
+    "weight": 75.0
+  }
+]

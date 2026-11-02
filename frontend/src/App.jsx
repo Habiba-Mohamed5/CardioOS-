@@ -22,12 +22,10 @@ function LandingPage() {
 
       {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 transition-all duration-300 bg-[#020617]/50 backdrop-blur-xl border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
-          <div className="text-2xl font-black tracking-tighter flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <Activity size={18} className="text-white" />
-            </span>
-            Cardio<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">OS</span>
+        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+          <div className="text-2xl font-black tracking-tighter flex items-center gap-3">
+            <img src="/cardioos_named_logo.jpg" alt="CardioOS" className="w-10 h-10 rounded-xl object-cover ring-1 ring-cyan-500/50 shadow-lg shadow-cyan-500/20" />
+            <span>Cardio<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">OS</span></span>
           </div>
           <div className="hidden md:flex gap-8 text-sm font-semibold text-slate-300">
             <a href="#features" className="hover:text-white transition">المميزات السريرية</a>
