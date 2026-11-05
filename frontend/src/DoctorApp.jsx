@@ -216,20 +216,58 @@ export default function DoctorApp() {
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30" dir="rtl">
-      {/* Header */}
-      <header className="h-16 px-6 bg-slate-900/90 border-b border-white/10 backdrop-blur-md flex items-center justify-between sticky top-0 z-40">
-        <div className="flex items-center gap-3">
-          <img src="/cardioos_named_logo.jpg" alt="CardioOS" className="h-9 w-9 rounded-lg object-cover ring-1 ring-cyan-500/50" />
-          <div>
-            <h1 className="text-lg font-bold text-white flex items-center gap-2">
+      {/* Top Header Bar */}
+      <header className="h-14 sm:h-16 px-3 sm:px-6 bg-slate-900/95 border-b border-white/10 backdrop-blur-md flex items-center justify-between sticky top-0 z-40">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <img src="/cardioos_named_logo.jpg" alt="CardioOS" className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg object-cover ring-1 ring-cyan-500/50 shrink-0" />
+          <div className="flex items-center gap-2">
+            <h1 className="text-base sm:text-lg font-bold text-white flex items-center gap-1 sm:gap-2">
               Cardio<span className="text-cyan-400">OS</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-medium">مركز قيادة الطبيب</span>
             </h1>
+            <span className="hidden md:inline-flex text-[11px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-medium">مركز قيادة الطبيب</span>
           </div>
         </div>
 
-        {/* 6 Tabs */}
-        <div className="flex items-center gap-1 bg-slate-950/60 p-1 rounded-xl border border-white/5 overflow-x-auto max-w-2xl">
+        {/* Action Buttons (100% visible on both mobile and desktop) */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          <button
+            onClick={() => setIsAscvdOpen(true)}
+            className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition shadow-sm"
+            title="حاسبة مخاطر القلب 10 سنوات (ASCVD)"
+          >
+            <Calculator size={14} className="shrink-0" />
+            <span className="hidden sm:inline">حاسبة ASCVD</span>
+          </button>
+
+          <button
+            onClick={() => setIsDrugOpen(true)}
+            className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30 text-xs font-bold transition shadow-sm"
+            title="فاحص التفاعلات الدوائية للقلب"
+          >
+            <Pill size={14} className="shrink-0" />
+            <span className="hidden sm:inline">فاحص الأدوية</span>
+          </button>
+
+          <button
+            onClick={() => setIsPrintableOpen(true)}
+            className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-slate-200 border border-white/15 text-xs font-bold transition shadow-sm"
+            title="تجهيز وطباعة تقرير سريري PDF"
+          >
+            <Printer size={14} className="shrink-0" />
+            <span className="hidden sm:inline">تقرير PDF</span>
+          </button>
+
+          <ThemeToggle />
+
+          <a href="/" className="text-xs px-2 sm:px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">
+            الرئيسية
+          </a>
+        </div>
+      </header>
+
+      {/* Dedicated Scrollable Tabs Navigation Bar (Sticky, Touch-Friendly, Uncrowded) */}
+      <nav className="sticky top-14 sm:top-16 z-30 bg-slate-950/90 border-b border-white/10 backdrop-blur-md px-2 sm:px-6 py-2 overflow-x-auto no-scrollbar smooth-scroll-x">
+        <div className="flex items-center gap-1.5 sm:gap-2 max-w-7xl mx-auto">
           {[
             { id: 'overview', label: 'نظرة عامة', icon: Activity },
             { id: 'copilot', label: 'المستشار الطبي (RAG)', icon: Search },
@@ -244,10 +282,10 @@ export default function DoctorApp() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 ${
                   isActive 
-                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20' 
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-md shadow-cyan-500/25 ring-1 ring-white/20' 
+                    : 'text-slate-400 hover:text-white bg-slate-900/60 hover:bg-slate-900 border border-white/5'
                 }`}
               >
                 <Icon size={14} />
@@ -256,68 +294,60 @@ export default function DoctorApp() {
             );
           })}
         </div>
+      </nav>
 
-        <div className="flex items-center gap-2">
+      {/* Main Container */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 py-4 sm:p-6 relative">
+        {/* Mobile Quick Action Buttons Ribbon */}
+        <div className="grid grid-cols-3 gap-2 mb-4 sm:hidden">
           <button
             onClick={() => setIsAscvdOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-semibold transition"
-            title="حاسبة مخاطر القلب 10 سنوات (ASCVD)"
+            className="p-2.5 rounded-2xl bg-slate-900 border border-cyan-500/40 text-cyan-300 text-center flex flex-col items-center justify-center gap-1 active:scale-95 transition shadow-sm"
           >
-            <Calculator size={13} />
-            <span className="hidden sm:inline">حاسبة ASCVD</span>
+            <Calculator size={18} className="text-cyan-400" />
+            <span className="text-[11px] font-bold">حاسبة ASCVD</span>
           </button>
 
           <button
             onClick={() => setIsDrugOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold transition"
-            title="فاحص التفاعلات الدوائية للقلب"
+            className="p-2.5 rounded-2xl bg-slate-900 border border-purple-500/40 text-purple-300 text-center flex flex-col items-center justify-center gap-1 active:scale-95 transition shadow-sm"
           >
-            <Pill size={13} />
-            <span className="hidden sm:inline">فاحص الأدوية</span>
+            <Pill size={18} className="text-purple-400" />
+            <span className="text-[11px] font-bold">فاحص الأدوية</span>
           </button>
 
           <button
             onClick={() => setIsPrintableOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 border border-white/10 text-xs font-semibold transition"
-            title="تجهيز وطباعة تقرير سريري PDF"
+            className="p-2.5 rounded-2xl bg-slate-900 border border-white/15 text-slate-200 text-center flex flex-col items-center justify-center gap-1 active:scale-95 transition shadow-sm"
           >
-            <Printer size={13} />
-            <span className="hidden sm:inline">تقرير PDF</span>
+            <Printer size={18} className="text-slate-300" />
+            <span className="text-[11px] font-bold">تقرير سريري PDF</span>
           </button>
-
-          <ThemeToggle />
-
-          <a href="/" className="text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition">
-            الرئيسية
-          </a>
         </div>
-      </header>
 
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-6 relative">
         {/* Hero Header Banner with Doctor Avatar & Integrated Animated Pulse */}
-        <div className="relative rounded-3xl overflow-hidden p-6 md:p-8 mb-6 border border-white/10 shadow-2xl bg-gradient-to-l from-slate-900 via-blue-950/70 to-slate-900 text-right z-10">
+        <div className="relative rounded-3xl overflow-hidden p-4 sm:p-6 md:p-8 mb-6 border border-white/10 shadow-2xl bg-gradient-to-l from-slate-900 via-blue-950/70 to-slate-900 text-right z-10">
           {/* Animated Heart GIF cleanly embedded inside the header background */}
           <div className="absolute inset-0 z-0 opacity-20 mix-blend-screen pointer-events-none overflow-hidden">
             <img src="/hero-bg.gif" alt="Pulsing Heart" className="w-full h-full object-cover scale-110" />
           </div>
 
-          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="flex items-center gap-5">
+          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+            <div className="flex items-center gap-4 sm:gap-5">
               <div className="relative shrink-0">
                 <img 
                   src="/doctor_icon.jpg" 
                   alt="Doctor Avatar" 
-                  className="w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover ring-2 ring-cyan-500/50 shadow-xl shadow-cyan-500/20" 
+                  className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-2xl object-cover ring-2 ring-cyan-500/50 shadow-xl shadow-cyan-500/20" 
                 />
-                <span className="absolute bottom-0 left-0 w-4 h-4 rounded-full bg-emerald-500 ring-2 ring-slate-900" title="Online" />
+                <span className="absolute bottom-0 left-0 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2 ring-slate-900" title="Online" />
               </div>
-              <div className="space-y-1.5">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-xs font-bold">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-[11px] font-bold">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                   مركز قيادة الطبيب السريري (Live Clinical Station)
                 </div>
-                <h1 className="text-2xl md:text-3xl font-black text-white">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white">
                   CardioOS — Doctor Command Center
                 </h1>
                 <p className="text-xs text-slate-300 leading-relaxed max-w-xl">
@@ -326,14 +356,14 @@ export default function DoctorApp() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
-              <div className="bg-slate-950/80 border border-white/10 px-4 py-2.5 rounded-xl text-center min-w-[120px]">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center w-full sm:w-auto shrink-0">
+              <div className="bg-slate-950/80 border border-white/10 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-center">
                 <span className="text-[10px] text-slate-400 block mb-0.5">حالة الذكاء الاصطناعي</span>
                 <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 justify-center font-mono">
                   <CheckCircle2 size={12} /> متصل بنجاح
                 </span>
               </div>
-              <div className="bg-slate-950/80 border border-white/10 px-4 py-2.5 rounded-xl text-center min-w-[120px]">
+              <div className="bg-slate-950/80 border border-white/10 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-center">
                 <span className="text-[10px] text-slate-400 block mb-0.5">المراجع المفهرسة</span>
                 <span className="text-xs font-bold text-cyan-400 font-mono">
                   AHA • WHO • NICE

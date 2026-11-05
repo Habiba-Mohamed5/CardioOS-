@@ -15,8 +15,8 @@ export default function PrintableReportModal({ isOpen, onClose, patientData }) {
   });
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white">
-      <div className="bg-slate-900 border border-white/15 rounded-3xl max-w-3xl w-full p-6 md:p-8 space-y-6 shadow-2xl relative print:border-none print:shadow-none print:bg-white print:text-black">
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto print:p-0 print:bg-white">
+      <div className="bg-slate-900 border border-white/15 rounded-3xl max-w-3xl w-full p-4 sm:p-6 md:p-8 space-y-5 shadow-2xl relative max-h-[94vh] overflow-y-auto print:border-none print:shadow-none print:bg-white print:text-black" dir="rtl">
         {/* Header Actions (hidden on print) */}
         <div className="flex justify-between items-center print:hidden">
           <h3 className="font-bold text-white text-base">معاينة التقرير الطبي المعتمد للطباعة والتصدير</h3>
@@ -35,7 +35,7 @@ export default function PrintableReportModal({ isOpen, onClose, patientData }) {
         </div>
 
         {/* Printable Paper Canvas */}
-        <div className="bg-white text-slate-900 p-8 rounded-2xl shadow-xl print:shadow-none print:p-0 space-y-6 font-sans" dir="rtl">
+        <div className="bg-white text-slate-900 p-4 sm:p-8 rounded-2xl shadow-xl print:shadow-none print:p-0 space-y-5 font-sans" dir="rtl">
           {/* Header with Logo */}
           <div className="flex justify-between items-center border-b-2 border-slate-900/10 pb-6">
             <div className="flex items-center gap-3">

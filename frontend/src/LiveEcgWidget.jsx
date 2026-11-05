@@ -33,8 +33,8 @@ export default function LiveEcgWidget({ title = "شريط التخطيط الس�
             <Heart size={24} className={`${glowClass} animate-heartbeat`} fill="currentColor" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-white flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                 {title}
               </span>

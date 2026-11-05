@@ -60,8 +60,8 @@ export default function AscvdCalculatorModal({ isOpen, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-slate-900 border border-white/15 rounded-3xl max-w-2xl w-full p-6 md:p-8 space-y-6 shadow-2xl relative">
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-slate-900 border border-white/15 rounded-3xl max-w-2xl w-full p-4 sm:p-6 md:p-8 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto" dir="rtl">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">

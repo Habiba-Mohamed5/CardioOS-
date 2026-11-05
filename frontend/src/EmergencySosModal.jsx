@@ -5,8 +5,8 @@ export default function EmergencySosModal({ isOpen, onClose, onAlertDoctor }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-rose-500 rounded-3xl max-w-lg w-full p-6 md:p-8 space-y-6 shadow-2xl relative shadow-rose-500/20 text-right" dir="rtl">
+    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-rose-500 rounded-3xl max-w-lg w-full p-4 sm:p-6 md:p-8 space-y-5 shadow-2xl relative max-h-[92vh] overflow-y-auto shadow-rose-500/20 text-right" dir="rtl">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
